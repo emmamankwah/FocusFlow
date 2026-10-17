@@ -77,7 +77,7 @@ class VerifyEmailRequest(BaseModel):
     # Identifies the account whose email address is being verified.
     email: EmailStr
     # Keep the OTP as text so codes with leading zeroes remain intact.
-    otp: str
+    otp: str = Field(pattern=r"^[0-9]{6}$")
 
 
 class ResendOtpRequest(BaseModel):

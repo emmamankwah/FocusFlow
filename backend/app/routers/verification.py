@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.email import send_verification_email
@@ -17,7 +18,13 @@ LOCK_OUT_MESSAGE = "Too many incorrect attempts, please re-enter email to get ne
 
 @router.post("/resend-otp")
 def resend_otp(payload: ResendOtpRequest, db: Session = Depends(get_db)):
-    pending_user = db.query(PendingUser).filter(PendingUser.email == payload.email).first()
+    pending_user = (
+        db.query(PendingUser)
+        .filter(PendingUser.email == payload.email)
+        .with_for_update()
+        .populate_existing()
+        .first()
+    )
     if not pending_user:
         raise HTTPException(status_code=404, detail="Pending registration not found")
     now = datetime.now(timezone.utc)
@@ -34,20 +41,29 @@ def resend_otp(payload: ResendOtpRequest, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="The current OTP has not expired yet")
 
     otp = generate_otp()
+    send_verification_email(pending_user.email, otp)
+
     pending_user.otp_code = hash_password(otp)
     pending_user.otp_expires_at = now + timedelta(minutes=3)
     pending_user.otp_attempts = 0
     db.commit()
 
-    send_verification_email(pending_user.email, otp)
     return {"message": "A new verification code has been sent"}
 
 
 @router.post("/verify-email")
 def verify_email(payload: VerifyEmailRequest, db: Session = Depends(get_db)):
     # Find the pending registration associated with the submitted email address.
-    pending_user = db.query(PendingUser).filter(PendingUser.email == payload.email).first()
+    pending_user = (
+        db.query(PendingUser)
+        .filter(PendingUser.email == payload.email)
+        .with_for_update()
+        .first()
+    )
     if not pending_user:
+        existing_user = db.query(User).filter(User.email == payload.email).first()
+        if existing_user:
+            raise HTTPException(status_code=409, detail="Email is already verified")
         raise HTTPException(status_code=404, detail="Pending registration not found")
     
     if pending_user.otp_attempts >= MAX_OTP_ATTEMPTS:
@@ -59,7 +75,7 @@ def verify_email(payload: VerifyEmailRequest, db: Session = Depends(get_db)):
         otp_expires_at = otp_expires_at.replace(tzinfo=timezone.utc)
 
     # Require a stored OTP that has not passed its expiry time.
-    if not pending_user.otp_code or not otp_expires_at or otp_expires_at < datetime.now(timezone.utc):
+    if not pending_user.otp_code or not otp_expires_at or otp_expires_at <= datetime.now(timezone.utc):
         raise HTTPException(status_code=400, detail="OTP expired, request a new one")
 
     # Compare the submitted code against the stored password-style hash.
@@ -70,6 +86,10 @@ def verify_email(payload: VerifyEmailRequest, db: Session = Depends(get_db)):
             raise HTTPException(status_code=429, detail=LOCK_OUT_MESSAGE)
         remaining = MAX_OTP_ATTEMPTS - pending_user.otp_attempts
         raise HTTPException(status_code=400, detail=f"Invalid OTP, {remaining} attempts left")
+
+    existing_user = db.query(User).filter(User.email == pending_user.email).first()
+    if existing_user:
+        raise HTTPException(status_code=409, detail="Email is already verified")
 
     # Promote the pending user to the verified account table.
     user = User(
@@ -82,5 +102,15 @@ def verify_email(payload: VerifyEmailRequest, db: Session = Depends(get_db)):
     )
     db.add(user)
     db.delete(pending_user)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError as exc:
+        db.rollback()
+        existing_user = db.query(User).filter(User.email == payload.email).first()
+        if existing_user:
+            raise HTTPException(
+                status_code=409,
+                detail="Email is already verified",
+            ) from exc
+        raise
     return {"message": "Email verified successfully"}
