@@ -28,6 +28,7 @@ class Settings(BaseSettings):
     SMTP_PORT: int
     SMTP_USERNAME: str
     SMTP_PASSWORD: str
+    OTP_OUTBOX_ENCRYPTION_KEY: str | None = None
     #Database URL is formed by this function
     @property
     def DATABASE_URL(self) -> str:

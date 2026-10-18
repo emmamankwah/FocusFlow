@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 
 from datetime import datetime,timedelta,timezone
 from app.core.security import authenticate_user, create_access_token, get_current_user, hash_password,generate_otp
-from app.core.email import send_verification_email
+from app.core.outbox import enqueue_verification_email
 from app.database.session import get_db
 from app.models.users import User
 from app.models.pending_users import PendingUser
@@ -48,9 +48,13 @@ def register(user_in: UserCreate, db: Session = Depends(get_db)):
 
         db.add(pending)
 
-    db.commit()
-    send_verification_email(user_in.email, otp)
-    return {"message": "Verification code sent to email"}
+    try:
+        enqueue_verification_email(db, user_in.email, otp)
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
+    return {"message": "Verification code queued for email delivery"}
 
 
 @router.post("/login", response_model=Token)

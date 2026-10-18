@@ -15,6 +15,7 @@ from app.models import users
 from app.models import Categories
 from app.models import task
 from app.models import pending_users
+from app.models import email_outbox
 
 # This is the Alembic Config object, which exposes the active migration configuration.
 config = context.config

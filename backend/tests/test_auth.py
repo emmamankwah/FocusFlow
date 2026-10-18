@@ -9,7 +9,10 @@ from sqlalchemy.orm import sessionmaker
 from app.core.config import settings
 from app.core.security import authenticate_user, create_access_token, hash_password, verify_password
 from app.database.session import Base
+from app.models.email_outbox import EmailOutbox
+from app.models.pending_users import PendingUser
 from app.models.users import User
+from app.routers import auth
 from app.schemas.user import UserCreate
 
 
@@ -100,3 +103,32 @@ def test_authenticate_user_validates_password():
         assert auth_user.email == "alice@example.com"
         assert verify_password("secret123", auth_user.hashed_password)
         assert authenticate_user(db, "alice@example.com", "wrongpass") is None
+
+
+def test_register_commits_pending_user_and_encrypted_email_job_together(monkeypatch):
+    engine = create_engine("sqlite:///:memory:")
+    Base.metadata.create_all(bind=engine)
+    SessionLocal = sessionmaker(bind=engine)
+
+    monkeypatch.setattr(auth, "generate_otp", lambda: "012345")
+    with SessionLocal() as db:
+        response = auth.register(
+            UserCreate(
+                first_name="Alice",
+                last_name="Example",
+                email="alice@example.com",
+                password="secret123",
+                confirm_password="secret123",
+            ),
+            db,
+        )
+
+        assert response == {"message": "Verification code queued for email delivery"}
+        pending = db.query(PendingUser).one()
+        job = db.query(EmailOutbox).one()
+        assert job.status == "pending"
+        assert job.recipient == pending.email
+        assert "012345" not in job.encrypted_otp
+        assert verify_password("012345", pending.otp_code)
+
+    engine.dispose()

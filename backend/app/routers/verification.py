@@ -1,10 +1,10 @@
 from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.core.email import send_verification_email
+from app.core.outbox import enqueue_verification_email
 from app.core.security import generate_otp, hash_password, verify_password
 from app.database.session import get_db
 from app.models.pending_users import PendingUser
@@ -41,14 +41,17 @@ def resend_otp(payload: ResendOtpRequest, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="The current OTP has not expired yet")
 
     otp = generate_otp()
-    send_verification_email(pending_user.email, otp)
-
     pending_user.otp_code = hash_password(otp)
     pending_user.otp_expires_at = now + timedelta(minutes=3)
     pending_user.otp_attempts = 0
-    db.commit()
+    try:
+        enqueue_verification_email(db, pending_user.email, otp)
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
 
-    return {"message": "A new verification code has been sent"}
+    return {"message": "A new verification code has been queued for delivery"}
 
 
 @router.post("/verify-email")
