@@ -9,3 +9,7 @@ python-jose[cryptography]
 passlib[argon2]
 EmailMessage
 pydantic
+EmailMessage
+Email-validator
+psycopg2-binary
+
