@@ -1,11 +1,13 @@
 
-import logging as logger
+import logging
 from psycopg2 import errors
 from security.users import hash_password, verify_password
 from model.user import UserLogin, UserRegister
-from repository.user import get_user_by_email, get_user_by_username, create_user
+from repository.user import (get_user_by_email, get_user_by_username, create_user)
 from security.users import hash_otp, verify_otp
-logger = logger.get_logger(__name__)
+from utilities.mail import send_verification_email
+
+logger = logging.getLogger(__name__)
 
 def register_user(user: UserRegister):
     if user.password != user.confirm_password:
@@ -47,11 +49,15 @@ def register_user(user: UserRegister):
 def login_user(user: UserLogin):
     try:
        
-        existing_user = get_user_by_email(user.email) and get_user_by_username(user.username)  
+        existing_user = get_user_by_email(user.email) 
 
         if not existing_user:
             logger.info("Invalid Credentials.")
             return {"error": "Invalid Credentials ."}
+
+        if existing_user is None:
+            logger.info("User not found.")
+            return {"error": "Account not found."}
 
         if not verify_password(user.password, existing_user["password"]):
             logger.info("Invalid Credentials.")
@@ -67,6 +73,7 @@ def login_user(user: UserLogin):
    
 
 def Request_otp(email: str):
+    email = email.strip()
     try:
         existing_user = get_user_by_email(email)
         if not existing_user:
@@ -75,10 +82,13 @@ def Request_otp(email: str):
         
         # Generate and send OTP logic here
         
-        otp_hash = hash_otp()
+       
+        hashed_otp = send_verification_email(email)
         logger.info("OTP sent successfully.")
         return {"message": "OTP sent successfully."}
     
     except Exception:
         logger.info("Request_otp failed")
         return {"error": "Something went wrong. Please try again."}
+
+
