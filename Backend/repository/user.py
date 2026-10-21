@@ -126,3 +126,28 @@ def increment_attempts(email: str) -> None:
     finally:
         if connection:
             connection.close()
+
+
+def clear_otp(email: str) -> None:
+    """Clears OTP fields and resets attempts upon successful verification."""
+    connection = None
+    try:
+        connection = _connect()
+        with connection:  # Automatically commits the transaction
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    """
+                    UPDATE otp_table 
+                    SET hash_otp = NULL, 
+                        expired_at = NULL, 
+                        attempts = 0 
+                    WHERE email = %s
+                    """,
+                    (email,)
+                )
+    except Exception as e:
+        logging.error("Failed to clear OTP ")
+        raise
+    finally:
+        if connection:
+            connection.close()
