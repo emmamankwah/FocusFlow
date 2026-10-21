@@ -80,7 +80,9 @@ def Request_otp(email: str):
             logger.info("User not found.")
             return {"error": "User not found."}
         
-        # Generate and send OTP logic here
+        if existing_user is None:
+            logger.info("User not found.")
+            return {"error": "User not found."}
         
        
         hashed_otp = send_verification_email(email)
