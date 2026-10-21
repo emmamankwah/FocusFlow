@@ -15,7 +15,7 @@ def database_connection():
             user=os.getenv("DB_USER"),
             password=os.getenv("DB_PASSWORD"),
             cursor_factory=RealDictCursor,
-            connect_timeout=5
+            connect_timeout=3
         )
         return connection
 
@@ -23,15 +23,3 @@ def database_connection():
         print(f"Database connection error: {e}")
         return None
 
-
-if __name__ == "__main__":
-    conn = database_connection()
-
-    if conn:
-        try:
-            print("Database connection successful.")
-        finally:
-            conn.close()
-            print("Database connection closed.")
-    else:
-        print("Database connection failed.")
