@@ -9,7 +9,7 @@ from repository.user import (get_user_by_email, get_user_by_username,
                              verify_user_otp,clear_otp_record, 
                              increment_attempts,increment_attempts
                             )
-
+from helper.help_user import save_otp_to_db
 
 from security.users import hash_otp, verify_otp
 from utilities.mail import send_verification_email
@@ -84,14 +84,14 @@ def Request_otp(email: str):
     email = email.strip()
     try:
         existing_user = get_user_by_email(email)
-        otp_user = otp_request(email)
+       
         if not existing_user:
             logging.info("User not found.")
             return {"error": "User not found."}
-        
-       
-       
+    
         hashed_otp = send_verification_email(email)
+
+        save_otp_to_db(email, hashed_otp)
         logging.info("OTP sent successfully.")
         return {"message": "OTP sent successfully."}
     
@@ -126,6 +126,7 @@ def verify_otp(email: str, user_otp: str):
             return {"error": "Invalid OTP."}
 
         clear_otp_record(email)
+
         logging.info("OTP verified successfully.")
         return {"message": "OTP verified successfully."}
     except Exception:
