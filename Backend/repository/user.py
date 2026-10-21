@@ -1,3 +1,5 @@
+import logging
+
 import psycopg2
 from psycopg2.extras import RealDictCursor
 from settings.db import database_connection
@@ -21,7 +23,10 @@ def get_user_by_email(user:UserLogin):
             cursor.execute("SELECT * FROM users WHERE email = %s", (email,))
             return cursor.fetchone()
     finally:
-        connection.close()
+        if 'cursor' in locals():
+            cursor.close()
+        if 'connection' in locals():
+            connection.close()
 
 
 def get_user_by_username(username: str) -> dict | None:
@@ -31,7 +36,10 @@ def get_user_by_username(username: str) -> dict | None:
             cursor.execute("SELECT * FROM users WHERE username = %s", (username,))
             return cursor.fetchone()
     finally:
-        connection.close()
+        if 'cursor' in locals():
+            cursor.close()
+        if 'connection' in locals():
+            connection.close()
 
 
 
@@ -55,6 +63,66 @@ def create_user(first_name, last_name, email, username, hash_password) -> None:
         connection.commit()
     except Exception:
         connection.rollback()
-        raise  # UniqueViolation etc. handled by the service
+        raise  
     finally:
-        connection.close()
+        if 'cursor' in locals():
+            cursor.close()
+        if 'connection' in locals():
+            connection.close()
+
+
+def get_user_otp(email: str) -> dict:
+    connection = None
+    try:
+        connection = _connect()
+        with connection.cursor(cursor_factory=RealDictCursor) as cursor:
+            cursor.execute("SELECT hash_otp,created_at, expired_at, attempts,total_attempts FROM otp_table WHERE email = %s", (email,))
+            return cursor.fetchone()
+            
+    except Exception:
+        logging.exception("otp_request failed")
+        raise
+    finally:
+        if connection:
+            connection.close()
+
+
+def verify_user_otp(email: str, otp: str) -> dict:
+    connection = None
+    try:
+        connection = _connect()
+        with connection.cursor(cursor_factory=RealDictCursor) as cursor:
+            cursor.execute("SELECT hash_otp,created_at, expired_at, attempts,total_attempts FROM otp_table WHERE email = %s", 
+                            (email,))
+            cursor.fetchone()
+            if not cursor.fetchone():
+                return {"error": "Invalid OTP."}
+            return cursor.fetchone()
+    except Exception:
+        logging.exception("verify_user_otp failed")
+        raise
+
+    finally:
+        if connection:
+            connection.close()
+
+def increment_attempts(email: str) -> None:
+    """Increments failed verification attempts counter by 1."""
+    connection = None
+    try:
+        connection = _connect()
+        with connection:  # Automatically commits the transaction
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    """
+                    UPDATE otp_table 
+                    SET attempts = attempts + 1 
+                    WHERE email = %s
+                    """,
+                    (email,)
+                )
+    except Exception as e:
+        logging.error("Failed to increment OTP attempts")
+    finally:
+        if connection:
+            connection.close()
