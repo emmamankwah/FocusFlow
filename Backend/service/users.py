@@ -1,10 +1,10 @@
 
-import logger
+import logging as logger
 from psycopg2 import errors
-from backend.security.users import hash_password, verify_password
+from security.users import hash_password, verify_password
 from model.user import UserLogin, UserRegister
-from backend.repository.user import get_user_by_email, get_user_by_username, create_user
-
+from repository.user import get_user_by_email, get_user_by_username, create_user
+from security.users import hash_otp, verify_otp
 logger = logger.get_logger(__name__)
 
 def register_user(user: UserRegister):
@@ -12,24 +12,25 @@ def register_user(user: UserRegister):
         logger.error("Passwords do not match.")
         return {"error": "Passwords do not match."}
 
-    email = user.email.srtip()
+    email = user.email.strip()
     username = user.username.strip()
 
     try:
         result_by_email = get_user_by_email(email)
-        result_by_username = get_user_by_username(username)
-        if result_by_email and result_by_username:
+        if result_by_email :
             return {"error": "Account already exists."}
         
        
             
-        return create_user(
+        create_user(
                 user.first_name, 
                 user.last_name, 
                 email,
                 username, 
                 hash_password(user.password)
         )
+        logger.info("User created successfully.")
+        return {"message": "User registered successfully."}
         
     
     except errors.UniqueViolation:
@@ -37,7 +38,7 @@ def register_user(user: UserRegister):
         return {"error": "Email or username already exists."}
     
     except Exception:
-        logger.info("register_user failed")
+        logger.exception("register_user failed")
         return {"error":"Registration failed. Please try again."}
 
    
@@ -47,14 +48,14 @@ def login_user(user: UserLogin):
     try:
        
         existing_user = get_user_by_email(user.email) and get_user_by_username(user.username)  
-        logger.info("User not found.")
 
         if not existing_user:
-            return {"error": "User not found."}
+            logger.info("Invalid Credentials.")
+            return {"error": "Invalid Credentials ."}
 
         if not verify_password(user.password, existing_user["password"]):
-            logger.info("Invalid password.")
-            return {"error": "Invalid password."}  
+            logger.info("Invalid Credentials.")
+            return {"error": "Invalid Credentials."}  
         
         logger.info("Login successful.")
         return {"message": "Login successful."}
@@ -65,4 +66,19 @@ def login_user(user: UserLogin):
 
    
 
+def Request_otp(email: str):
+    try:
+        existing_user = get_user_by_email(email)
+        if not existing_user:
+            logger.info("User not found.")
+            return {"error": "User not found."}
         
+        # Generate and send OTP logic here
+        
+        otp_hash = hash_otp()
+        logger.info("OTP sent successfully.")
+        return {"message": "OTP sent successfully."}
+    
+    except Exception:
+        logger.info("Request_otp failed")
+        return {"error": "Something went wrong. Please try again."}

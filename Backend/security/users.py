@@ -1,6 +1,8 @@
 from passlib.context import CryptContext
 from model.user import UserLogin, UserRegister
-from backend.repository.user import get_user_by_email, get_user_by_username, create_user
+from repository.user import get_user_by_email, get_user_by_username, create_user
+from utilities.otp import generate_otp
+
 
 pwd_context = CryptContext(
     schemes=["argon2"],
@@ -17,3 +19,11 @@ def hash_password(password: str) -> str:
 
 def verify_password(password: str, stored_hash: str) -> bool:
     return pwd_context.verify(password, stored_hash)
+
+def hash_otp(otp: str) -> str:
+    otp = generate_otp()
+    return pwd_context.hash(otp)
+
+def verify_otp(otp: str, stored_hash: str) -> bool:
+    return pwd_context.verify(otp, stored_hash)
+
