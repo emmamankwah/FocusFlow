@@ -4,7 +4,13 @@ from psycopg2 import errors
 from Backend.security import otp
 from security.users import hash_password, verify_password
 from model.user import UserLogin, UserRegister
-from repository.user import (get_user_by_email, get_user_by_username, create_user,otp_request, verify_otp,get_user_otp, verify_user_otp,clear_otp_record, increment_attempts,increment_attempts)
+from repository.user import (get_user_by_email, get_user_by_username, 
+                             create_user,otp_request, verify_otp,get_user_otp, 
+                             verify_user_otp,clear_otp_record, 
+                             increment_attempts,increment_attempts
+                            )
+
+
 from security.users import hash_otp, verify_otp
 from utilities.mail import send_verification_email
 
