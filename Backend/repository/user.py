@@ -1,49 +1,60 @@
+import psycopg2
 from psycopg2.extras import RealDictCursor
 from settings.db import database_connection
-from model.user import UserRegister, UserLogin
+from model.user import UserLogin, UserRegister
+from service.users import register_user, login_user
 
 
-Login = UserLogin
-def get_user_by_email(Register:UserRegister):
-    email = Register.email
-    
+def _connect():
+    connection = database_connection()
+    if connection is None:
+        raise ConnectionError("Database connection failed.")
+    return connection
 
+
+
+def get_user_by_email(user:UserLogin):
+    email = user.email
+    connection = _connect()
     try:
-        connection = database_connection()
-        if connection is None:  
-            return {"error": "Database connection failed."}
-        cursor = connection.cursor()
-        cursor.execute("SELECT * FROM users WHERE email = %s", (email,))
-        result = cursor.fetchone()
-        if result:
-            return result
-            
-    except Exception:
-        print("Account not found")
-
+        with connection.cursor(cursor_factory=RealDictCursor) as cursor:
+            cursor.execute("SELECT * FROM users WHERE email = %s", (email,))
+            return cursor.fetchone()
     finally:
-        if 'cursor' in locals():
-            cursor.close()
-        if 'connection' in locals():
-            connection.close()
+        connection.close()
 
 
-# def register_user(Register:UserRegister):
-#     try:
-#         connection = database_connection()
-#         if connection is None:
-#             return {"error": "Database connection failed."}
-#         cursor = connection.cursor()
-#         cursor.execute(
-#             "INSERT INTO users (first_name, last_name, email, username, password) VALUES (%s, %s, %s, %s, %s)",
-#             (Register.first_name, Register.last_name, Register.email, Register.username, Register.password)
-#         )
-#         connection.commit()
-#     except Exception as e:
-#         return {"error": f"An error occurred: {str(e)}"}
-#     finally:
-#         if 'cursor' in locals():
-#             cursor.close()
-#         if 'connection' in locals():
-#             connection.close()
-#     return {"message": "User registered successfully."}
+def get_user_by_username(username: str) -> dict | None:
+    connection = _connect()
+    try:
+        with connection.cursor(cursor_factory=RealDictCursor) as cursor:
+            cursor.execute("SELECT * FROM users WHERE username = %s", (username,))
+            return cursor.fetchone()
+    finally:
+        connection.close()
+
+
+
+def create_user(first_name, last_name, email, username, hash_password) -> None:
+    connection = _connect()
+    user = register_user()
+    if user is None:
+        raise ValueError("User registration failed.")
+    first_name = user.first_name
+    last_name = user.last_name
+    email = user.email
+    username = user.username
+    hash_password = user.hash_password
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "INSERT INTO users (first_name, last_name, email, username, password) "
+                "VALUES (%s, %s, %s, %s, %s)",
+                (first_name, last_name, email, username, hash_password),
+            )
+        connection.commit()
+    except Exception:
+        connection.rollback()
+        raise  # UniqueViolation etc. handled by the service
+    finally:
+        connection.close()
