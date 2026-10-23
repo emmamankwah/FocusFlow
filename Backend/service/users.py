@@ -1,13 +1,13 @@
 
 import logging
 from psycopg2 import errors
-from Backend.security import otp
+from security.otp import otp
 from security.users import hash_password, verify_password
 from model.user import UserLogin, UserRegister
 from repository.user import (get_user_by_email, get_user_by_username, 
-                             create_user,otp_request, verify_otp,get_user_otp, 
-                             verify_user_otp,clear_otp_record, 
-                             increment_attempts,increment_attempts
+                             create_user,get_user_otp, 
+                             verify_user_otp,
+                             increment_attempts,clear_otp
                             )
 from helper.help_user import save_otp_to_db
 
@@ -125,7 +125,7 @@ def verify_otp(email: str, user_otp: str):
             logging.info("Invalid OTP.")
             return {"error": "Invalid OTP."}
 
-        clear_otp_record(email)
+        clear_otp(email)
 
         logging.info("OTP verified successfully.")
         return {"message": "OTP verified successfully."}

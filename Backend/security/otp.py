@@ -2,7 +2,6 @@ from utilities.otp import generate_otp
     
 from passlib.context import CryptContext
 
-from Backend.utilities.otp import generate_otp
 
 
 

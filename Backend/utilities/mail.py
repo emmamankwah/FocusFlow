@@ -1,5 +1,5 @@
 from settings.mail import send_email
-from utilities.otp import create_secure_otp,verify_otp
+from security.otp import create_secure_otp,verify_otp
 
 def send_verification_email(user_email: str) -> str:
     
