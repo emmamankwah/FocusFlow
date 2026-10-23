@@ -13,7 +13,8 @@ from repository.authentication.user_repo import (
     get_user_by_username,
     create_user,
     get_user_otp,
-    verify_user_otp
+    verify_user_otp,
+    clear_otp,
 )
 from utilities.mail import send_verification_email
 from typing import Dict
@@ -78,6 +79,12 @@ def request_otp(email: str) -> Dict:
         if not existing_user:
             return {"error": "Invalid email."}
 
+        user_otp = get_user_otp(email)
+
+        if not user_otp.email:
+            return {"error": "OTP request failed."}
+
+
         send_verification_email(otp_request.email)
 
         return {"message": "OTP sent successfully."}
@@ -102,7 +109,59 @@ def verify_otp(email: str, otp: str) -> Dict:
         if not secure_verify_otp(plain_otp, hashed_otp):
             return {"error": "Invalid OTP."}
 
+        clear_otp(email)
+
         return {"message": "OTP verified successfully."}
+
+    except Exception:
+        return {"error": "Something went wrong. Please try again."}
+
+
+def resend_otp(email: str) -> Dict:
+    try:
+        otp_resend = OtpResend(email=email)
+        existing_user = get_user_by_email(email)
+
+        if not existing_user:
+            return {"error": "Invalid email."}
+
+        get_otp = get_user_otp(otp_resend.email)
+
+        if get_otp is not None:
+            clear_otp(email)
+
+        send_verification_email(otp_resend.email)
+
+        return {"message": "OTP resent successfully."}
+
+    except Exception:
+        return {"error": "Something went wrong. Please try again."}
+
+
+
+
+
+def reset_password(email: str, otp: str, new_password: str) -> Dict:
+    try:
+        reset_password = ResetPassword(email=email, otp=otp, new_password=new_password)
+        existing_user = get_user_by_email(reset_password.email)
+
+        if not existing_user:
+            return {"error": "Invalid email."}
+
+        hashed_otp = existing_user.hashed_otp
+        plain_otp = reset_password.otp
+
+        if not secure_verify_otp(plain_otp, hashed_otp):
+            return {"error": "Invalid OTP."}
+
+        hashed_new_password = hash_password(reset_password.new_password)
+
+        # Update the user's password in the database
+        # Assuming you have a function to update the password
+        update_user_password(email, hashed_new_password)
+
+        return {"message": "Password reset successfully."}
 
     except Exception:
         return {"error": "Something went wrong. Please try again."}
