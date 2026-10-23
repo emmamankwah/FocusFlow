@@ -32,7 +32,7 @@ def register_user(user: UserRegister):
         
        
             
-        create_user(
+        return create_user(
                 user.first_name, 
                 user.last_name, 
                 email,
