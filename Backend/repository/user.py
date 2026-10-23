@@ -1,6 +1,5 @@
 import logging
 
-import psycopg2
 from psycopg2.extras import RealDictCursor
 from settings.db import database_connection
 from model.user import UserLogin, UserRegister
@@ -20,27 +19,20 @@ def get_user_by_email(user:UserLogin):
     connection = _connect()
     try:
         with connection.cursor(cursor_factory=RealDictCursor) as cursor:
-            cursor.execute("SELECT * FROM users WHERE email = %s", (email,))
+            cursor.execute("SELECT * FROM users WHERE email = %s", (email,),)
             return cursor.fetchone()
     finally:
-        if 'cursor' in locals():
-            cursor.close()
-        if 'connection' in locals():
-            connection.close()
+       connection.close()
 
 
 def get_user_by_username(username: str) -> dict | None:
     connection = _connect()
     try:
         with connection.cursor(cursor_factory=RealDictCursor) as cursor:
-            cursor.execute("SELECT * FROM users WHERE username = %s", (username,))
+            cursor.execute("SELECT * FROM users WHERE username = %s", (username,),)
             return cursor.fetchone()
     finally:
-        if 'cursor' in locals():
-            cursor.close()
-        if 'connection' in locals():
-            connection.close()
-
+        connection.close()
 
 
 def create_user(first_name, last_name, email, username, hash_password) -> None:
@@ -65,10 +57,7 @@ def create_user(first_name, last_name, email, username, hash_password) -> None:
         connection.rollback()
         raise  
     finally:
-        if 'cursor' in locals():
-            cursor.close()
-        if 'connection' in locals():
-            connection.close()
+       connection.close()
 
 
 def get_user_otp(email: str) -> dict:
@@ -94,10 +83,10 @@ def verify_user_otp(email: str, otp: str) -> dict:
         with connection.cursor(cursor_factory=RealDictCursor) as cursor:
             cursor.execute("SELECT hash_otp,created_at, expired_at, attempts,total_attempts FROM otp_table WHERE email = %s", 
                             (email,))
-            cursor.fetchone()
-            if not cursor.fetchone():
+            row = cursor.fetchone()
+            if not row:
                 return {"error": "Invalid OTP."}
-            return cursor.fetchone()
+            return row
     except Exception:
         logging.exception("verify_user_otp failed")
         raise
