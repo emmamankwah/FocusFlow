@@ -1,5 +1,12 @@
+
 import re
-from pydantic import BaseModel, EmailStr, field_validator
+
+from pydantic import (
+    BaseModel,
+    EmailStr,
+    field_validator,
+    model_validator,
+)
 
 
 class PasswordValidation(BaseModel):
@@ -42,6 +49,12 @@ class UserRegister(PasswordValidation):
     username: str
     password: str
     confirm_password: str
+
+    @model_validator(mode="after")
+    def passwords_match(self):
+        if self.password != self.confirm_password:
+            raise ValueError("Passwords do not match.")
+        return self
 
 
 class ResetPassword(PasswordValidation):
