@@ -1,5 +1,5 @@
 import logging
-
+from datetime import datetime, timezone
 from psycopg2.extras import RealDictCursor
 from settings.db import database_connection
 from model.user import UserLogin, UserRegister
@@ -86,21 +86,40 @@ def verify_user_otp(email: str, otp: str) -> dict:
             row = cursor.fetchone()
             if not row:
                 return {"error": "Invalid OTP."}
-            return row
-        now = row['created_at']
+           
+        created = row['created_at']
         expiry = row['expired_at']
 
-        if now >= expiry:
+        if created >= expiry:
             return {"error": "OTP has expired."}
+
+        if datetime.now(timezone.utc) >= expiry.replace(
+                tzinfo=timezone.utc
+            ) if expiry.tzinfo is None else datetime.now(timezone.utc) >= expiry:
+                return {"error": "OTP has expired."}
 
         total_attempts = row['total_attempts']
         attempts = row['attempts']
 
-        if attempts > total_attempts:
+        if attempts >= total_attempts:
             return {"error": "Too many failed attempts."}
+        
 
+        hashed_otp = row['hash_otp']
+        if not hashed_otp:
+            return {"error": "No OTP found for this email."}
+
+        return {
+            "hash_otp": row["hash_otp"],
+            "created_at": row["created_at"],
+            "expired_at": expiry,
+            "attempts": attempts,
+            "total_attempts": total_attempts,
+        }
+
+      
         return {"success": "OTP verified successfully."}
-    
+        
     except Exception:
         logging.exception("verify_user_otp failed")
         raise
