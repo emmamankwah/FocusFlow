@@ -65,7 +65,7 @@ def get_user_otp(email: str) -> dict:
     try:
         connection = _connect()
         with connection.cursor(cursor_factory=RealDictCursor) as cursor:
-            cursor.execute("SELECT hash_otp,created_at, expired_at, attempts,total_attempts FROM otp_table WHERE email = %s", (email,))
+            cursor.execute("SELECT hash_otp,created_at, expired_at, attempts,total_attempts FROM otp_table WHERE email = %s", (email,),)
             return cursor.fetchone()
             
     except Exception:
@@ -82,11 +82,25 @@ def verify_user_otp(email: str, otp: str) -> dict:
         connection = _connect()
         with connection.cursor(cursor_factory=RealDictCursor) as cursor:
             cursor.execute("SELECT hash_otp,created_at, expired_at, attempts,total_attempts FROM otp_table WHERE email = %s", 
-                            (email,))
+                            (email,),)
             row = cursor.fetchone()
             if not row:
                 return {"error": "Invalid OTP."}
             return row
+        now = row['created_at']
+        expiry = row['expired_at']
+
+        if now >= expiry:
+            return {"error": "OTP has expired."}
+
+        total_attempts = row['total_attempts']
+        attempts = row['attempts']
+
+        if attempts > total_attempts:
+            return {"error": "Too many failed attempts."}
+
+        return {"success": "OTP verified successfully."}
+    
     except Exception:
         logging.exception("verify_user_otp failed")
         raise
@@ -108,7 +122,7 @@ def increment_attempts(email: str) -> None:
                     SET attempts = attempts + 1 
                     WHERE email = %s
                     """,
-                    (email,)
+                    (email,),
                 )
     except Exception as e:
         logging.error("Failed to increment OTP attempts")
@@ -132,7 +146,7 @@ def clear_otp(email: str) -> None:
                         attempts = 0 
                     WHERE email = %s
                     """,
-                    (email,)
+                    (email,),
                 )
     except Exception as e:
         logging.error("Failed to clear OTP ")
