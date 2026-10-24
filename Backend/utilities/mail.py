@@ -1,4 +1,3 @@
-from Backend.service.users import OTP_TTL_MINUTES
 from settings.mail import send_email
 from security.otp import create_secure_otp,verify_otp
 
