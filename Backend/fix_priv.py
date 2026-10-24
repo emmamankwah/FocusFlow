@@ -1,0 +1,10 @@
+from settings.db import database_connection
+c = database_connection()
+cur = c.cursor()
+cur.execute("GRANT ALL ON SCHEMA public TO focusflow")
+cur.execute("ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO focusflow")
+cur.execute("ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO focusflow")
+c.commit()
+cur.close()
+c.close()
+print('done')
