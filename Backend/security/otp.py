@@ -12,7 +12,7 @@ unimportable.  There is now exactly one import.
 
 from passlib.context import CryptContext  # Argon2 for the short-lived code digest.
 
-from utilities.otp import generate_otp  # Cryptographically secure digit generator.
+from utilities.authentication_user.otp import generate_otp  # Cryptographically secure digit generator.
 
 pwd_context = CryptContext(  # Shared hashing configuration.
     schemes=["argon2"],  # Slow hashing makes offline brute-force of the six digits expensive.
