@@ -1,21 +1,36 @@
+"""Pydantic models for the authentication flow."""
 
 import re
+from typing import Annotated
 
 from pydantic import (
     BaseModel,
+    BeforeValidator,
     EmailStr,
+    Field,
     field_validator,
     model_validator,
 )
 
+StrippedStr = Annotated[
+    str,
+    BeforeValidator(
+        lambda value: value.strip() if isinstance(value, str) else value
+    ),
+]
+
 
 class PasswordValidation(BaseModel):
-    @field_validator("password", "new_password", check_fields=False)
+    @field_validator("password", "newPassword", check_fields=False)
     @classmethod
     def validate_password(cls, value: str) -> str:
         if len(value) < 8:
             raise ValueError(
                 "Password must be at least 8 characters long."
+            )
+        if len(value) > 128:
+            raise ValueError(
+                "Password must be at most 128 characters long."
             )
         if not re.search(r"[A-Z]", value):
             raise ValueError(
@@ -37,53 +52,68 @@ class PasswordValidation(BaseModel):
 
 
 class UserLogin(PasswordValidation):
-    email: EmailStr
-    username: str
+    email: EmailStr = Field(max_length=255)
     password: str
 
 
 class UserRegister(PasswordValidation):
-    first_name: str
-    last_name: str
-    email: EmailStr
-    username: str
+    firstName: StrippedStr = Field(min_length=1, max_length=100)
+    lastName: StrippedStr = Field(min_length=1, max_length=100)
+    email: EmailStr = Field(min_length=1, max_length=255)
+    username: str 
     password: str
-    confirm_password: str
+    confirmPassword: str 
 
     @model_validator(mode="after")
-    def passwords_match(self):
-        if self.password != self.confirm_password:
+    def passwords_match(self) -> "UserRegister":
+        if (
+            self.confirmPassword is not None
+            and self.password != self.confirmPassword
+        ):
             raise ValueError("Passwords do not match.")
         return self
 
 
 class ResetPassword(PasswordValidation):
-    email: EmailStr
-    otp: str
-    new_password: str
+    email: EmailStr = Field(max_length=255)
+    otp: StrippedStr = Field(min_length=1)
+    newPassword: str
 
 
 class ChangePassword(PasswordValidation):
-    email: EmailStr
-    old_password: str
-    new_password: str
+    email: EmailStr = Field(max_length=255)
+    oldPassword: str
+    newPassword: str
 
 
 class OtpRequest(BaseModel):
-    email: EmailStr
+    email: EmailStr = Field(max_length=255)
 
 
 class OtpVerification(BaseModel):
-    email: EmailStr
-    otp: str
+    email: EmailStr = Field(max_length=255)
+    otp: StrippedStr = Field(min_length=1)
 
 
 class OtpResend(BaseModel):
-    email: EmailStr
+    email: EmailStr = Field(max_length=255)
 
 
 class UserProfileUpdate(BaseModel):
-    first_name: str
-    last_name: str
+    firstName: StrippedStr = Field(min_length=1, max_length=100)
+    lastName: StrippedStr = Field(min_length=1, max_length=100)
+    username: str
+    email: EmailStr = Field(max_length=255)
+
+
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+
+
+class UserPublic(BaseModel):
+    id: int
+    firstName: str
+    lastName: str
     username: str
     email: EmailStr
