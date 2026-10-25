@@ -1,167 +1,173 @@
-from pyexpat import errors
+"""Service layer for the authentication flow.
 
-from model.user import (UserRegister,UserLogin,
-                        ResetPassword,ChangePassword,
-                        OtpRequest,OtpVerification,
-                        OtpResend,UserProfileUpdate
-                    )
-from security.secure_users import (hash_password, verify_password,
-                                   hash_otp,secure_verify_otp
-                                )
-from repository.authentication.user_repo import (
-    get_user_by_email,
-    get_user_by_username,
-    create_user,
-    get_user_otp,
-    verify_user_otp,
-    clear_otp,
-)
-from utilities.mail import send_verification_email
+Registration happens in two steps:
+
+1. ``register_user`` stores the details in ``pending_users`` and emails an OTP.
+2. ``verify_otp`` checks the OTP, then moves the pending row into ``users``.
+
+Only verified users ever reach ``users``, so a row in ``users`` implies a
+verified account.
+"""
+
+import logging
+from datetime import datetime, timezone
 from typing import Dict
 
+from model.user import UserLogin, UserRegister
+from repository.authentication.user_repo import (
+    clear_otp,
+    delete_pending_user,
+    get_user_by_email,
+    get_user_by_username,
+    get_user_otp,
+    increment_attempts,
+    move_pending_user_to_users,
+    save_otp,
+    save_pending_user,
+    update_user_password,
+)
+from security.otp import verify_otp as verify_otp_hash
+from security.secure_users import hash_password, verify_password
+from utilities.authentication_user.mail import send_verification_email
 
-def register_user(user_data: UserRegister) -> Dict:
+logger = logging.getLogger(__name__)
+
+
+def _issue_otp(email: str) -> None:
+    """Generate a code, email it, and store its hash with its expiry."""
+    otp = send_verification_email(email)
+    save_otp(email, otp["hashed_otp"], otp["created_at"], otp["expired_at"])
+
+
+def _check_otp(email: str, otp: str) -> str | None:
+    """Return an error message if the code is unusable or wrong, else None."""
+    otp_row = get_user_otp(email)
+
+    if not otp_row or not otp_row["hash_otp"]:
+        return "No active verification code. Request a new one."
+
+    expired_at = otp_row["expired_at"]
+    if expired_at is None:
+        return "Verification code expired. Request a new one."
+
+    # The column may be TIMESTAMP (naive) or TIMESTAMPTZ (aware). Build the
+    # current time in the same form so the comparison never raises.
+    now = (
+        datetime.now(expired_at.tzinfo)
+        if expired_at.tzinfo is not None
+        else datetime.now(timezone.utc).replace(tzinfo=None)
+    )
+    if expired_at < now:
+        return "Verification code expired. Request a new one."
+
+    if otp_row["attempts"] >= otp_row["total_attempts"]:
+        return "Too many attempts. Request a new code."
+
+    if not verify_otp_hash(otp.strip(), otp_row["hash_otp"]):
+        increment_attempts(email)
+        remaining = otp_row["total_attempts"] - otp_row["attempts"] - 1
+        if remaining <= 0:
+            return "Too many attempts. Request a new code."
+        return f"Invalid code. {remaining} attempt(s) left."
+
+    return None
+
+
+def register_user(user_data: UserRegister) -> Dict[str, str]:
+    email = user_data.email.strip().lower()
+    username = user_data.username.strip()
+
+    if get_user_by_email(email):
+        return {"error": "Email already registered."}
+
+    if get_user_by_username(username):
+        return {"error": "Username already taken."}
+
+    save_pending_user(
+        user_data.firstName,
+        user_data.lastName,
+        email,
+        username,
+        hash_password(user_data.password),
+    )
+
     try:
-        email = user_data['email']
-
-        if get_user_by_email(email):
-            return {"error": "Email already exists."}
-        
-        password = user_data['password']
-        confirm_password = user_data['confirm_password']
-
-        if password != confirm_password:
-            raise ValueError("Passwords do not match.")
-
-        hashed_password = hash_password(password)
-
-        create_user(
-            user_data['first_name'],
-            user_data['last_name'],
-            user_data['email'],
-            user_data['username'],
-            hashed_password
-        )
-
-        return {"message": "User registered successfully"}
-    except errors.UniqueViolation:
-        return {"error": "Email or username already exists."}
-    except ValueError as e:
-        return {"error": str(e)}
-
-
-
-def login_user(user: UserLogin) -> Dict:
-    try:
-        existing_user = get_user_by_email(user.email.strip())
-
-        if not existing_user :
-            return {"error": "Invalid credentials."}
-
-        user_password = user.password
-        server_password = existing_user['confirm_password']
-
-        if not verify_password(user_password, server_password):
-            return {"error": "Invalid credentials."}
-        
-        return {"message": "Login successful."}
-
+        _issue_otp(email)
     except Exception:
-        return {"error": "Something went wrong. Please try again."}
+        logger.exception("Could not send verification email to %s", email)
+        delete_pending_user(email)
+        return {"error": "Could not send the verification email. Please try again."}
+
+    return {"message": "Verification code sent. Check your email."}
 
 
+def login_user(user: UserLogin) -> Dict[str, str]:
+    existing_user = get_user_by_email(user.email.strip().lower())
 
-def request_otp(email: str) -> Dict:
+    if not existing_user:
+        return {"error": "Invalid email or password."}
+
+    if not verify_password(user.password, existing_user["password"]):
+        return {"error": "Invalid email or password."}
+
+    return {"message": "Login successful."}
+
+
+def request_otp(email: str) -> Dict[str, str]:
+    """Re-issue a code for an email that already started registering."""
+    return resend_otp(email)
+
+
+def resend_otp(email: str) -> Dict[str, str]:
+    email = email.strip().lower()
+
+    # The OTP row survives verification (clear_otp nulls the hash), so its
+    # presence is what proves this email belongs to a real account.
+    if get_user_otp(email) is None:
+        return {"error": "No registration found for this email."}
+
     try:
-        otp_request = OtpRequest(email=email)
-        existing_user = get_user_by_email(email)
-
-        if not existing_user:
-            return {"error": "Invalid email."}
-
-        user_otp = get_user_otp(email)
-
-        if not user_otp.email:
-            return {"error": "OTP request failed."}
-
-
-        send_verification_email(otp_request.email)
-
-        return {"message": "OTP sent successfully."}
-
+        _issue_otp(email)
     except Exception:
-        return {"error": "Something went wrong. Please try again."}
+        logger.exception("Could not resend verification email to %s", email)
+        return {"error": "Could not send the verification email. Please try again."}
+
+    return {"message": "Verification code sent."}
 
 
+def verify_otp(email: str, otp: str) -> Dict[str, str]:
+    email = email.strip().lower()
 
+    error = _check_otp(email, otp)
+    if error:
+        return {"error": error}
 
-def verify_otp(email: str, otp: str) -> Dict:
+    # Promote first, clear second: if the promotion fails the code is still
+    # valid and the user can retry instead of having to register again.
     try:
-        otp_user = OtpVerification(email=email, otp=otp)
-        existing_user = verify_user_otp(email)
-
-        if not existing_user:
-            return {"error": "Invalid email."}
-
-        hashed_otp = existing_user.hashed_otp
-        plain_otp = otp_user.otp
-
-        if not secure_verify_otp(plain_otp, hashed_otp):
-            return {"error": "Invalid OTP."}
-
-        clear_otp(email)
-
-        return {"message": "OTP verified successfully."}
-
+        move_pending_user_to_users(email)
+    except ValueError:
+        return {"error": "No registration found for this email."}
     except Exception:
-        return {"error": "Something went wrong. Please try again."}
+        logger.exception("Could not promote pending user %s", email)
+        return {"error": "Could not complete verification. Please try again."}
+
+    clear_otp(email)
+
+    return {"message": "Email verified. You can now log in."}
 
 
-def resend_otp(email: str) -> Dict:
-    try:
-        otp_resend = OtpResend(email=email)
-        existing_user = get_user_by_email(email)
+def reset_password(email: str, otp: str, new_password: str) -> Dict[str, str]:
+    email = email.strip().lower()
 
-        if not existing_user:
-            return {"error": "Invalid email."}
+    if not get_user_by_email(email):
+        return {"error": "Invalid email."}
 
-        get_otp = get_user_otp(otp_resend.email)
+    error = _check_otp(email, otp)
+    if error:
+        return {"error": error}
 
-        if get_otp is not None:
-            clear_otp(email)
+    update_user_password(email, hash_password(new_password))
+    clear_otp(email)
 
-        send_verification_email(otp_resend.email)
-
-        return {"message": "OTP resent successfully."}
-
-    except Exception:
-        return {"error": "Something went wrong. Please try again."}
-
-
-
-
-
-def reset_password(email: str, otp: str, new_password: str) -> Dict:
-    try:
-        reset_password = ResetPassword(email=email, otp=otp, new_password=new_password)
-        existing_user = get_user_by_email(reset_password.email)
-
-        if not existing_user:
-            return {"error": "Invalid email."}
-
-        hashed_otp = existing_user.hashed_otp
-        plain_otp = reset_password.otp
-
-        if not secure_verify_otp(plain_otp, hashed_otp):
-            return {"error": "Invalid OTP."}
-
-        hashed_new_password = hash_password(reset_password.new_password)
-
-        # Update the user's password in the database
-        # Assuming you have a function to update the password
-        update_user_password(email, hashed_new_password)
-
-        return {"message": "Password reset successfully."}
-
-    except Exception:
-        return {"error": "Something went wrong. Please try again."}
+    return {"message": "Password reset successfully."}
