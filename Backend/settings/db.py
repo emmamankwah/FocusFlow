@@ -3,6 +3,10 @@ import os
 import psycopg2
 from psycopg2.extras import RealDictCursor
 from dotenv import load_dotenv
+import logging
+
+logging = logging.getLogger(__name__)
+logging = logging.getLogger(__name__)
 
 load_dotenv()
 
@@ -20,6 +24,6 @@ def database_connection():
         return connection
 
     except psycopg2.Error as e:
-        print(f"Database connection error: {e}")
+        logging.error("Database connection error")
         return None
 
