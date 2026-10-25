@@ -20,7 +20,9 @@ def send_verification_email(user_email: str):
         "If you did not request this, you can ignore this email."
     )
 
-    send_email(user_email, subject, body)
+    sent = send_email(user_email, subject, body)
+    if not sent:
+        raise RuntimeError("Failed to send verification email")
 
     return {
         "plain_otp": plain_otp,
