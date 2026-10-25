@@ -10,8 +10,12 @@ verified account.
 """
 
 import logging
-from datetime import datetime, timezone
+import os
+from datetime import datetime, timezone,timedelta
 from typing import Dict
+import dotenv
+from dotenv import load_dotenv
+
 
 from model.user import UserLogin, UserRegister
 from repository.authentication.user_repo import (
@@ -21,32 +25,69 @@ from repository.authentication.user_repo import (
     get_user_by_username,
     get_user_otp,
     increment_attempts,
-    move_pending_user_to_users,
     save_otp,
     save_pending_user,
     update_user_password,
+    get_pending_user,
+    delete_pending_user,
+    create_user,
 )
 from security.otp import verify_otp as verify_otp_hash
 from security.secure_users import hash_password, verify_password
-from utilities.authentication_user.mail import send_verification_email
+from utilities.authentication_user.mail import (
+    create_verification_otp,
+    send_verification_email,
+)
+
+
+load_dotenv()
+OTP_EXPIRY_MINUTES = int(os.getenv("OTP_EXPIRY_MINUTES"))
+
+
 
 logger = logging.getLogger(__name__)
 
 
-def issue_otp(email: str) :
-    """Generate a code, email it, and store its hash with its expiry."""
-    otp = send_verification_email(email)
-    save_otp(email, otp["hashed_otp"], otp["created_at"], otp["expired_at"])
+
+
+def send_verification_mail(user_email: str) -> None:
+    expires_minutes = OTP_EXPIRY_MINUTES
+
+    pending_user = get_pending_user(user_email)
+    if pending_user:
+        delete_pending_user(user_email)
+
+    # Generate ONE OTP
+    otp_data = create_verification_otp(expires_minutes)
+
+    # Save its hash and timestamps to the database
+    
+
+    # Email the matching plain OTP
+    send_verification_email(
+        user_email=user_email,
+        plain_otp=otp_data["plain_otp"],
+        expires_minutes=expires_minutes,
+    )
+
+    save_otp(
+            user_email=user_email,
+            hashed_otp=otp_data["hashed_otp"],
+            created_at=otp_data["created_at"],
+            expired_at=otp_data["expired_at"],
+        )
+
+    
 
 
 def check_otp(email: str, otp: str) -> str:
     """Return an error message if the code is unusable or wrong, else None."""
-    otp_row = get_user_otp(email)
+    otp_data = get_user_otp(email)
 
-    if not otp_row or not otp_row["hash_otp"]:
+    if not otp_data or not otp_data["hashed_otp"]:
         return "No active verification code. Request a new one."
 
-    expired_at = otp_row["expired_at"]
+    expired_at = otp_data["expired_at"]
     if expired_at is None:
         return "Verification code expired. Request a new one."
 
@@ -60,12 +101,12 @@ def check_otp(email: str, otp: str) -> str:
     if expired_at < now:
         return "Verification code expired. Request a new one."
 
-    if otp_row["attempts"] >= otp_row["total_attempts"]:
+    if otp_data["attempts"] >= otp_data["total_attempts"]:
         return "Too many attempts. Request a new code."
 
-    if not verify_otp_hash(otp.strip(), otp_row["hash_otp"]):
+    if not verify_otp_hash(otp.strip(), otp_data["hashed_otp"]):
         increment_attempts(email)
-        remaining = otp_row["total_attempts"] - otp_row["attempts"] - 1
+        remaining = otp_data["total_attempts"] - otp_data["attempts"] - 1
         if remaining <= 0:
             return "Too many attempts. Request a new code."
         return f"Invalid code. {remaining} attempt(s) left."
@@ -74,7 +115,7 @@ def check_otp(email: str, otp: str) -> str:
 
 
 def register_user(user_data: UserRegister) -> Dict[str, str]:
-    email = user_data.email.strip().lower()
+    email = user_data.email.strip()
     username = user_data.username.strip()
 
     if get_user_by_email(email):
@@ -92,7 +133,7 @@ def register_user(user_data: UserRegister) -> Dict[str, str]:
     )
 
     try:
-        issue_otp(email)
+        send_verification_email(email)
     except Exception:
         logger.exception("Could not send verification email to %s", email)
         delete_pending_user(email)
@@ -119,15 +160,14 @@ def request_otp(email: str) -> Dict[str, str]:
 
 
 def resend_otp(email: str) -> Dict[str, str]:
-    email = email.strip().lower()
+    email = email.strip()
 
-    # The OTP row survives verification (clear_otp nulls the hash), so its
-    # presence is what proves this email belongs to a real account.
+   
     if get_user_otp(email) is None:
         return {"error": "No registration found for this email."}
 
     try:
-        issue_otp(email)
+        send_verification_email(email)
     except Exception:
         logger.exception("Could not resend verification email to %s", email)
         return {"error": "Could not send the verification email. Please try again."}
@@ -136,15 +176,15 @@ def resend_otp(email: str) -> Dict[str, str]:
 
 
 def verify_otp(email: str, otp: str) -> Dict[str, str]:
-    email = email.strip().lower()
-    error = check_otp(email, otp)
-    if error:
-        return {"error": error}
+    email = email.strip()
+    error_check = check_otp(email, otp)
+    if error_check:
+        return {"error": error_check}
 
     # Promote first, clear second: if the promotion fails the code is still
     # valid and the user can retry instead of having to register again.
     try:
-        move_pending_user_to_users(email)
+        create_user(email)
     except ValueError:
         return {"error": "No registration found for this email."}
     except Exception:
@@ -162,9 +202,9 @@ def reset_password(email: str, otp: str, new_password: str) -> Dict[str, str]:
     if not get_user_by_email(email):
         return {"error": "Invalid email."}
 
-    error = check_otp(email, otp)
-    if error:
-        return {"error": error}
+    error_check = check_otp(email, otp)
+    if error_check:
+        return {"error": error_check}
 
     update_user_password(email, hash_password(new_password))
     clear_otp(email)
