@@ -3,6 +3,7 @@ from psycopg2.extras import RealDictCursor
 from settings.db import database_connection
 
 
+
 def _connect():
     connection = database_connection()
     if connection is None:
@@ -10,11 +11,11 @@ def _connect():
     return connection
 
 
-def get_user_by_email(email):
+def get_user_by_email(email:str) -> dict |None:
     connection = _connect()
     try:
         with connection.cursor(cursor_factory=RealDictCursor) as cursor:
-            cursor.execute("SELECT * FROM users WHERE email = %s", (email,))
+            cursor.execute("SELECT email,username,password FROM users WHERE email = %s", (email,))
             return cursor.fetchone()
     finally:
         connection.close()
@@ -24,13 +25,13 @@ def get_user_by_username(username: str) -> dict | None:
     connection = _connect()
     try:
         with connection.cursor(cursor_factory=RealDictCursor) as cursor:
-            cursor.execute("SELECT * FROM users WHERE username = %s", (username,))
+            cursor.execute("SELECT email,username,password FROM users WHERE username = %s", (username,))
             return cursor.fetchone()
     finally:
         connection.close()
 
 
-def create_user(first_name, last_name, email, username, hash_password) -> None:
+def create_user(first_name, last_name, email, username, hash_password):
     connection = _connect()
     try:
         with connection.cursor() as cursor:
@@ -47,12 +48,13 @@ def create_user(first_name, last_name, email, username, hash_password) -> None:
         connection.close()
 
 
-def save_pending_user(first_name, last_name, email, username, hash_password) -> None:
+
+
+def save_pending_user(first_name, last_name, email, username, hash_password):
     connection = _connect()
     try:
         with connection.cursor() as cursor:
-            cursor.execute("DELETE FROM users WHERE email = %s", (email,))
-            cursor.execute("DELETE FROM pending_users WHERE email = %s", (email,))
+          
             cursor.execute(
                 """
                 INSERT INTO pending_users (first_name, last_name, email, username, password)
@@ -68,16 +70,12 @@ def save_pending_user(first_name, last_name, email, username, hash_password) -> 
         connection.close()
 
 
-
-
-
 def get_pending_user(email: str) -> dict | None:
     connection = _connect()
     try:
         with connection.cursor(cursor_factory=RealDictCursor) as cursor:
             cursor.execute(
-                "SELECT first_name, last_name, email, username, password "
-                "FROM pending_users WHERE email = %s",
+                "select email from pending_users where email = %s",
                 (email,),
             )
             return cursor.fetchone()
@@ -89,7 +87,7 @@ def delete_pending_user(email: str) -> None:
     connection = _connect()
     try:
         with connection.cursor() as cursor:
-            cursor.execute("DELETE FROM pending_users WHERE email = %s", (email,))
+            cursor.execute("DELETE FROM pending_users WHERE email = %s", (email,),)
         connection.commit()
     except Exception:
         connection.rollback()
@@ -98,17 +96,17 @@ def delete_pending_user(email: str) -> None:
         connection.close()
 
 
-def save_otp(email: str, hash_otp: str, created_at, expired_at, total_attempts: int = 5) -> None:
+def save_otp(email: str, hash_otp: str, created_at, expired_at):
     connection = _connect()
     try:
         with connection.cursor() as cursor:
-            cursor.execute("DELETE FROM otp_table WHERE email = %s", (email,))
+            cursor.execute("DELETE FROM otp_table WHERE email = %s", (email,),)
             cursor.execute(
                 """
-                INSERT INTO otp_table (email, hash_otp, created_at, expired_at, attempts, total_attempts)
-                VALUES (%s, %s, %s, %s, 0, %s)
+                INSERT INTO otp_table (email, hash_otp, created_at, expired_at, attempts)
+                VALUES (%s, %s, %s, %s, 0)
                 """,
-                (email, hash_otp, created_at, expired_at, total_attempts),
+                (email, hash_otp, created_at, expired_at),
             )
         connection.commit()
     except Exception:
@@ -156,7 +154,7 @@ def clear_otp(email: str) -> None:
     connection = _connect()
     try:
         with connection.cursor() as cursor:
-            cursor.execute("DELETE FROM otp_table WHERE email = %s", (email,))
+            cursor.execute("DELETE FROM otp_table WHERE email = %s", (email,),)
         connection.commit()
     except Exception:
         connection.rollback()
@@ -166,7 +164,7 @@ def clear_otp(email: str) -> None:
         connection.close()
 
 
-def update_user_password(email: str, hashed_password: str) -> None:
+def update_user_password(email: str, hashed_password: str):
     connection = _connect()
     try:
         with connection.cursor() as cursor:

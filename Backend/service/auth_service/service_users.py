@@ -3,8 +3,7 @@
 Registration happens in two steps:
 
 1. ``register_user`` stores the details in ``pending_users`` and emails an OTP.
-2. ``verify_otp`` checks the OTP, creates the user in ``users``, and deletes
-   the pending row.
+2. ``verify_otp`` checks the OTP, then moves the pending row into ``users``.
 
 Only verified users ever reach ``users``, so a row in ``users`` implies a
 verified account.
@@ -17,13 +16,12 @@ from typing import Dict
 from model.user import UserLogin, UserRegister
 from repository.authentication.user_repo import (
     clear_otp,
-    create_user,
     delete_pending_user,
-    get_pending_user,
     get_user_by_email,
     get_user_by_username,
     get_user_otp,
     increment_attempts,
+    move_pending_user_to_users,
     save_otp,
     save_pending_user,
     update_user_password,
@@ -35,13 +33,13 @@ from utilities.authentication_user.mail import send_verification_email
 logger = logging.getLogger(__name__)
 
 
-def _issue_otp(email: str) -> None:
+def issue_otp(email: str) :
     """Generate a code, email it, and store its hash with its expiry."""
     otp = send_verification_email(email)
     save_otp(email, otp["hashed_otp"], otp["created_at"], otp["expired_at"])
 
 
-def _check_otp(email: str, otp: str) -> str | None:
+def check_otp(email: str, otp: str) -> str:
     """Return an error message if the code is unusable or wrong, else None."""
     otp_row = get_user_otp(email)
 
@@ -94,7 +92,7 @@ def register_user(user_data: UserRegister) -> Dict[str, str]:
     )
 
     try:
-        _issue_otp(email)
+        issue_otp(email)
     except Exception:
         logger.exception("Could not send verification email to %s", email)
         delete_pending_user(email)
@@ -104,7 +102,7 @@ def register_user(user_data: UserRegister) -> Dict[str, str]:
 
 
 def login_user(user: UserLogin) -> Dict[str, str]:
-    existing_user = get_user_by_email(user.email.strip().lower())
+    existing_user = get_user_by_email(user.email.strip())
 
     if not existing_user:
         return {"error": "Invalid email or password."}
@@ -123,13 +121,13 @@ def request_otp(email: str) -> Dict[str, str]:
 def resend_otp(email: str) -> Dict[str, str]:
     email = email.strip().lower()
 
-    # clear_otp deletes the row outright, so the account itself has to prove
-    # the email exists: pending before verification, users after verification.
-    if not get_pending_user(email) and not get_user_by_email(email):
+    # The OTP row survives verification (clear_otp nulls the hash), so its
+    # presence is what proves this email belongs to a real account.
+    if get_user_otp(email) is None:
         return {"error": "No registration found for this email."}
 
     try:
-        _issue_otp(email)
+        issue_otp(email)
     except Exception:
         logger.exception("Could not resend verification email to %s", email)
         return {"error": "Could not send the verification email. Please try again."}
@@ -139,29 +137,20 @@ def resend_otp(email: str) -> Dict[str, str]:
 
 def verify_otp(email: str, otp: str) -> Dict[str, str]:
     email = email.strip().lower()
-
-    error = _check_otp(email, otp)
+    error = check_otp(email, otp)
     if error:
         return {"error": error}
 
-    pending = get_pending_user(email)
-    if not pending:
-        return {"error": "No registration found for this email."}
-
+    # Promote first, clear second: if the promotion fails the code is still
+    # valid and the user can retry instead of having to register again.
     try:
-        # The password was hashed before it was stored in pending_users.
-        create_user(
-            pending["first_name"],
-            pending["last_name"],
-            pending["email"],
-            pending["username"],
-            pending["password"],
-        )
+        move_pending_user_to_users(email)
+    except ValueError:
+        return {"error": "No registration found for this email."}
     except Exception:
-        logger.exception("Could not create user account for %s", email)
+        logger.exception("Could not promote pending user %s", email)
         return {"error": "Could not complete verification. Please try again."}
 
-    delete_pending_user(email)
     clear_otp(email)
 
     return {"message": "Email verified. You can now log in."}
@@ -173,7 +162,7 @@ def reset_password(email: str, otp: str, new_password: str) -> Dict[str, str]:
     if not get_user_by_email(email):
         return {"error": "Invalid email."}
 
-    error = _check_otp(email, otp)
+    error = check_otp(email, otp)
     if error:
         return {"error": error}
 
