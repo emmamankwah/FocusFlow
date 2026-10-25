@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { Link, useNavigate } from 'react-router-dom'
 import { apiPost } from '@/lib/api'
+import { emailRules } from '@/lib/validation'
 import AuthLayout from '@/components/AuthLayout'
 import TextField from '@/components/TextField'
 import SubmitButton from '@/components/SubmitButton'
@@ -23,6 +24,7 @@ export default function ForgotPassword() {
       await apiPost('/auth/forgot-password', { email: data.email })
       sessionStorage.setItem('pendingOtpEmail', data.email)
       sessionStorage.setItem('otpFlow', 'reset-password')
+      sessionStorage.removeItem('otpCode')
       navigate('/verify-otp')
     } catch (err) {
       setApiError(err.message || 'Could not send reset code')
@@ -50,10 +52,7 @@ export default function ForgotPassword() {
         placeholder="you@example.com"
         autoComplete="email"
         error={errors.email}
-        registration={register('email', {
-          required: 'Email is required',
-          pattern: { value: /^\S+@\S+$/i, message: 'Invalid email address' },
-        })}
+        registration={register('email', emailRules)}
       />
 
       <FormError message={apiError} />

@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom'
 
 export default function NotFound() {
   return (
-    <div className="relative grid min-h-screen place-items-center overflow-hidden bg-canvas px-6 py-16 text-center font-grotesk text-ink">
+    <main className="relative grid min-h-screen place-items-center overflow-hidden bg-canvas px-6 py-16 text-center font-grotesk text-ink">
       <div aria-hidden className="pointer-events-none absolute inset-0">
         <div className="absolute -top-40 -left-32 h-[480px] w-[480px] rounded-full bg-amber/10 blur-3xl" />
         <div className="absolute right-[-160px] bottom-[-160px] h-[460px] w-[460px] rounded-full bg-coral/10 blur-3xl" />
@@ -25,6 +25,6 @@ export default function NotFound() {
           </Link>
         </div>
       </div>
-    </div>
+    </main>
   )
 }

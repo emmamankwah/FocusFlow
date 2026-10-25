@@ -12,7 +12,7 @@ export default function Cta() {
         <h2 className="mx-auto max-w-[18ch] text-[clamp(2rem,4.4vw,3rem)] font-bold tracking-[-0.02em] text-ink">
           Stop reorganizing your own week by hand
         </h2>
-        <p className="mx-auto mt-5 max-w-[46ch] text-[1rem] leading-relaxed text-dim">
+        <p className="mx-auto mt-5 max-w-[46ch] text-[1rem] leading-relaxed text-ink/75">
           Create your account in under a minute — FocusFlow rebuilds your first week tonight.
         </p>
         <div className="mt-9 flex flex-wrap items-center justify-center gap-3.5">

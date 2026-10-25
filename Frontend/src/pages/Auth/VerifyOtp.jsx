@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Navigate, useNavigate } from 'react-router-dom'
 import { apiPost, setToken } from '@/lib/api'
 import FormError from '@/components/FormError'
 
@@ -15,11 +15,20 @@ export default function VerifyOtp() {
   const inputs = useRef([])
   const navigate = useNavigate()
 
+  const [email] = useState(() => sessionStorage.getItem('pendingOtpEmail') || '')
+  const [flow] = useState(() => sessionStorage.getItem('otpFlow'))
+
   useEffect(() => {
     if (cooldown <= 0) return
     const timer = setTimeout(() => setCooldown((c) => c - 1), 1000)
     return () => clearTimeout(timer)
   }, [cooldown])
+
+  if (!email) {
+    return (
+      <Navigate to={flow === 'reset-password' ? '/forgot-password' : '/signup'} replace />
+    )
+  }
 
   const handleChange = (index, value) => {
     if (!/^\d*$/.test(value)) return
@@ -40,6 +49,7 @@ export default function VerifyOtp() {
   }
 
   const handlePaste = (e) => {
+    e.preventDefault()
     const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, LENGTH)
     if (!pasted) return
 
@@ -50,12 +60,6 @@ export default function VerifyOtp() {
   }
 
   const handleResend = async () => {
-    const email = sessionStorage.getItem('pendingOtpEmail') || ''
-    if (!email) {
-      setResendMsg({ type: 'error', text: 'Your session expired — please start again.' })
-      return
-    }
-
     setResending(true)
     setResendMsg(null)
     try {
@@ -72,22 +76,27 @@ export default function VerifyOtp() {
   const handleSubmit = async (e) => {
     e.preventDefault()
     const code = otp.join('')
-    const email = sessionStorage.getItem('pendingOtpEmail') || ''
-    const flow = sessionStorage.getItem('otpFlow')
     setApiError(null)
+
+    if (flow === 'reset-password') {
+      sessionStorage.setItem('otpCode', code)
+      navigate('/reset-password')
+      return
+    }
+
     setIsSubmitting(true)
     try {
-      if (flow === 'reset-password') {
-        sessionStorage.setItem('otpCode', code)
-        navigate('/reset-password')
-        return
-      }
-      const res = await apiPost('/auth/verify-otp', { email, code })
-      if (res?.token) setToken(res.token)
-      else if (res?.access_token) setToken(res.access_token)
+      const res = await apiPost('/auth/verify-otp', { email, otp: code })
+      const token = res?.token || res?.access_token
       sessionStorage.removeItem('pendingOtpEmail')
       sessionStorage.removeItem('otpFlow')
-      navigate('/')
+
+      if (token) {
+        setToken(token)
+        navigate('/')
+      } else {
+        navigate('/login', { state: { verified: true } })
+      }
     } catch (err) {
       setApiError(err.message || 'Verification failed')
     } finally {
@@ -96,7 +105,7 @@ export default function VerifyOtp() {
   }
 
   return (
-    <div className="relative grid min-h-screen place-items-center overflow-hidden bg-canvas px-6 py-16 font-grotesk text-ink">
+    <main className="relative grid min-h-screen place-items-center overflow-hidden bg-canvas px-6 py-16 font-grotesk text-ink">
       <div aria-hidden className="pointer-events-none absolute inset-0">
         <div className="absolute -top-40 -left-32 h-[480px] w-[480px] rounded-full bg-amber/10 blur-3xl" />
         <div className="absolute right-[-160px] bottom-[-160px] h-[460px] w-[460px] rounded-full bg-coral/10 blur-3xl" />
@@ -106,7 +115,7 @@ export default function VerifyOtp() {
         <div className="mb-8">
           <h1 className="text-[1.75rem] font-bold tracking-[-0.01em]">Verify your email</h1>
           <p className="mt-2.5 text-[0.9rem] text-dim">
-            We&apos;ve sent a 6-digit code to your email address
+            We&apos;ve sent a 6-digit code to <span className="text-ink">{email}</span>
           </p>
         </div>
 
@@ -118,11 +127,14 @@ export default function VerifyOtp() {
                 ref={(el) => (inputs.current[i] = el)}
                 type="text"
                 inputMode="numeric"
+                autoComplete={i === 0 ? 'one-time-code' : 'off'}
                 maxLength={1}
                 value={digit}
+                autoFocus={i === 0}
                 onChange={(e) => handleChange(i, e.target.value)}
                 onKeyDown={(e) => handleKeyDown(i, e)}
                 aria-label={`Digit ${i + 1}`}
+                aria-invalid={apiError ? true : undefined}
                 className="h-14 w-12 rounded-[3px] border border-line bg-deck text-center font-mono text-lg text-ink outline-none transition-colors focus:border-amber/60 focus:ring-2 focus:ring-amber/20 sm:h-16 sm:w-14"
               />
             ))}
@@ -132,6 +144,7 @@ export default function VerifyOtp() {
 
           {resendMsg && (
             <p
+              role="status"
               className={`rounded-[3px] border px-3.5 py-2.5 text-[0.8rem] ${
                 resendMsg.type === 'success'
                   ? 'border-cyan/30 bg-cyan/10 text-cyan'
@@ -171,6 +184,6 @@ export default function VerifyOtp() {
           ← Back
         </button>
       </div>
-    </div>
+    </main>
   )
 }

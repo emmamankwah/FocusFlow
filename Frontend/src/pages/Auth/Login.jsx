@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { apiPost, setToken } from '@/lib/api'
+import { emailRules } from '@/lib/validation'
 import AuthLayout from '@/components/AuthLayout'
 import TextField from '@/components/TextField'
 import SubmitButton from '@/components/SubmitButton'
@@ -10,12 +11,13 @@ import FormError from '@/components/FormError'
 export default function Login() {
   const [apiError, setApiError] = useState(null)
   const navigate = useNavigate()
+  const { state } = useLocation()
 
   const {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
-  } = useForm()
+  } = useForm({ defaultValues: { remember: false } })
 
   const onSubmit = async (data) => {
     setApiError(null)
@@ -24,8 +26,8 @@ export default function Login() {
         email: data.email,
         password: data.password,
       })
-      if (res?.token) setToken(res.token)
-      else if (res?.access_token) setToken(res.access_token)
+      const token = res?.token || res?.access_token
+      if (token) setToken(token, data.remember)
       navigate('/')
     } catch (err) {
       setApiError(err.message || 'Login failed')
@@ -46,6 +48,15 @@ export default function Login() {
         </>
       }
     >
+      {state?.verified && (
+        <p
+          role="status"
+          className="rounded-[3px] border border-cyan/30 bg-cyan/10 px-3.5 py-2.5 text-[0.8rem] text-cyan"
+        >
+          Email verified — log in to continue.
+        </p>
+      )}
+
       <TextField
         id="email"
         label="Email address"
@@ -53,10 +64,7 @@ export default function Login() {
         placeholder="you@example.com"
         autoComplete="email"
         error={errors.email}
-        registration={register('email', {
-          required: 'Email is required',
-          pattern: { value: /^\S+@\S+$/i, message: 'Invalid email address' },
-        })}
+        registration={register('email', emailRules)}
       />
 
       <TextField
@@ -75,10 +83,7 @@ export default function Login() {
 
       <div className="flex items-center justify-between">
         <label className="flex items-center gap-2">
-          <input
-            type="checkbox"
-            className="h-4 w-4 accent-amber"
-          />
+          <input type="checkbox" className="h-4 w-4 accent-amber" {...register('remember')} />
           <span className="text-[0.8rem] text-dim">Remember me</span>
         </label>
         <Link to="/forgot-password" className="font-medium text-amber hover:text-amber/80">

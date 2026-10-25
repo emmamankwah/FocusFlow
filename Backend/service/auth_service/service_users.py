@@ -3,7 +3,8 @@
 Registration happens in two steps:
 
 1. ``register_user`` stores the details in ``pending_users`` and emails an OTP.
-2. ``verify_otp`` checks the OTP, then moves the pending row into ``users``.
+2. ``verify_otp`` checks the OTP, creates the user in ``users``, and deletes
+   the pending row.
 
 Only verified users ever reach ``users``, so a row in ``users`` implies a
 verified account.
@@ -16,12 +17,13 @@ from typing import Dict
 from model.user import UserLogin, UserRegister
 from repository.authentication.user_repo import (
     clear_otp,
+    create_user,
     delete_pending_user,
+    get_pending_user,
     get_user_by_email,
     get_user_by_username,
     get_user_otp,
     increment_attempts,
-    move_pending_user_to_users,
     save_otp,
     save_pending_user,
     update_user_password,
@@ -121,9 +123,9 @@ def request_otp(email: str) -> Dict[str, str]:
 def resend_otp(email: str) -> Dict[str, str]:
     email = email.strip().lower()
 
-    # The OTP row survives verification (clear_otp nulls the hash), so its
-    # presence is what proves this email belongs to a real account.
-    if get_user_otp(email) is None:
+    # clear_otp deletes the row outright, so the account itself has to prove
+    # the email exists: pending before verification, users after verification.
+    if not get_pending_user(email) and not get_user_by_email(email):
         return {"error": "No registration found for this email."}
 
     try:
@@ -142,16 +144,24 @@ def verify_otp(email: str, otp: str) -> Dict[str, str]:
     if error:
         return {"error": error}
 
-    # Promote first, clear second: if the promotion fails the code is still
-    # valid and the user can retry instead of having to register again.
-    try:
-        move_pending_user_to_users(email)
-    except ValueError:
+    pending = get_pending_user(email)
+    if not pending:
         return {"error": "No registration found for this email."}
+
+    try:
+        # The password was hashed before it was stored in pending_users.
+        create_user(
+            pending["first_name"],
+            pending["last_name"],
+            pending["email"],
+            pending["username"],
+            pending["password"],
+        )
     except Exception:
-        logger.exception("Could not promote pending user %s", email)
+        logger.exception("Could not create user account for %s", email)
         return {"error": "Could not complete verification. Please try again."}
 
+    delete_pending_user(email)
     clear_otp(email)
 
     return {"message": "Email verified. You can now log in."}

@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 
 const DAY_ABBR = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 const DAY_START_HOUR = 8
 const DAY_END_HOUR = 22
+const DAY_HOURS = DAY_END_HOUR - DAY_START_HOUR
 
 const COLOR_CLASS = {
   amber: 'bg-amber',
@@ -37,27 +38,23 @@ export default function WeekCard() {
     return () => window.clearInterval(id)
   }, [])
 
-  const days = useMemo(() => {
-    const start = new Date(now)
-    start.setDate(now.getDate() - now.getDay())
-    return Array.from({ length: 7 }, (_, i) => {
-      const date = new Date(start)
-      date.setDate(start.getDate() + i)
-      return {
-        date,
-        isToday: date.toDateString() === now.toDateString(),
-        blocks: PATTERN[i],
-      }
-    })
-    // Build the week once — the grid does not need to rebuild as `now` ticks.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  // Rebuilt on every tick so "today" stays correct after midnight; seven dates
+  // are cheap, and keying by the day string keeps the columns from remounting.
+  const start = new Date(now)
+  start.setDate(now.getDate() - now.getDay())
+  const days = Array.from({ length: 7 }, (_, i) => {
+    const date = new Date(start)
+    date.setDate(start.getDate() + i)
+    return {
+      date,
+      isToday: date.toDateString() === now.toDateString(),
+      blocks: PATTERN[i],
+    }
+  })
 
   const hour = now.getHours() + now.getMinutes() / 60
   const inDayWindow = hour >= DAY_START_HOUR && hour <= DAY_END_HOUR
-  const nowTop = inDayWindow
-    ? ((hour - DAY_START_HOUR) / (DAY_END_HOUR - DAY_START_HOUR)) * 100
-    : null
+  const nowTop = inDayWindow ? ((hour - DAY_START_HOUR) / DAY_HOURS) * 100 : null
 
   return (
     <div className="rounded-[4px] border border-line bg-surface p-5">
@@ -70,7 +67,7 @@ export default function WeekCard() {
 
       <div className="grid grid-cols-7 gap-1.5">
         {days.map((day) => (
-          <div key={day.date.toISOString()} className="flex flex-col gap-1">
+          <div key={day.date.toDateString()} className="flex flex-col gap-1">
             <div
               className={`pb-1.5 text-center text-[0.68rem] ${
                 day.isToday ? 'font-semibold text-amber' : 'text-dim'
@@ -87,8 +84,8 @@ export default function WeekCard() {
                     COLOR_CLASS[block.c]
                   }`}
                   style={{
-                    top: `${(block.s / 10) * 100}%`,
-                    height: `${((block.e - block.s) / 10) * 100}%`,
+                    top: `${(block.s / DAY_HOURS) * 100}%`,
+                    height: `${((block.e - block.s) / DAY_HOURS) * 100}%`,
                   }}
                 />
               ))}

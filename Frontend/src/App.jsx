@@ -1,5 +1,6 @@
 import { lazy, Suspense } from 'react'
 import { Route, Routes } from 'react-router-dom'
+import ScrollToTop from './components/ScrollToTop.jsx'
 
 const Landing = lazy(() => import('./pages/Landing/Landing.jsx'))
 const Register = lazy(() => import('./pages/Auth/Register.jsx'))
@@ -20,6 +21,7 @@ function PageLoader() {
 export default function App() {
   return (
     <Suspense fallback={<PageLoader />}>
+      <ScrollToTop />
       <Routes>
         <Route path="/" element={<Landing />} />
         <Route path="/signup" element={<Register />} />

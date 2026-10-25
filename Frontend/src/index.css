@@ -141,15 +141,16 @@
   }
 
   body {
-    background-color: var(--color-slate-950);
-    color: var(--color-slate-100);
+    background-color: var(--color-canvas);
+    color: var(--color-ink);
     font-family: var(--font-sans);
+    color-scheme: dark;
     -webkit-font-smoothing: antialiased;
   }
 
   ::selection {
-    background-color: var(--color-fuchsia-500);
-    color: var(--color-white);
+    background-color: var(--color-amber);
+    color: var(--color-canvas);
   }
 
   :focus-visible {

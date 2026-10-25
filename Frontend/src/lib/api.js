@@ -1,19 +1,45 @@
 const BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/+$/, '')
 
 function getToken() {
-  return localStorage.getItem('token')
+  return localStorage.getItem('token') || sessionStorage.getItem('token')
 }
 
-export function setToken(token) {
-  if (token) localStorage.setItem('token', token)
-  else localStorage.removeItem('token')
+export function setToken(token, persist = true) {
+  localStorage.removeItem('token')
+  sessionStorage.removeItem('token')
+  if (!token) return
+  if (persist) localStorage.setItem('token', token)
+  else sessionStorage.setItem('token', token)
+}
+
+function firstMessage(value) {
+  return typeof value === 'string' && value.trim() ? value : null
+}
+
+// The backend answers with `{"error": "..."}`, FastAPI validation failures with
+// `{"detail": [...]}`, and plain HTTP errors with a status code. Reduce all of
+// them to one readable sentence.
+function errorMessage(data, status) {
+  if (data && typeof data === 'object') {
+    if (Array.isArray(data.detail)) {
+      const messages = data.detail
+        .map((item) => firstMessage(item?.msg) || firstMessage(item?.message))
+        .filter(Boolean)
+      if (messages.length) return messages.join(' ')
+    }
+
+    return (
+      firstMessage(data.detail) ||
+      firstMessage(data.error) ||
+      firstMessage(data.message) ||
+      `Request failed with status ${status}`
+    )
+  }
+
+  return firstMessage(data) || `Request failed with status ${status}`
 }
 
 export async function api(path, { method = 'GET', body, headers = {}, signal } = {}) {
-  if (!BASE_URL) {
-    throw new Error('VITE_API_BASE_URL is not set')
-  }
-
   const config = {
     method,
     signal,
@@ -45,12 +71,16 @@ export async function api(path, { method = 'GET', body, headers = {}, signal } =
     }
   }
 
-  if (!res.ok) {
-    const message =
-      (data && typeof data === 'object' && (data.detail || data.message)) ||
-      (typeof data === 'string' && data) ||
-      `Request failed with status ${res.status}`
-    const error = new Error(message)
+  // Some endpoints report failures in the body while still returning 200.
+  const bodyError =
+    data && typeof data === 'object' && !Array.isArray(data)
+      ? firstMessage(data.error)
+      : null
+
+  if (!res.ok || bodyError) {
+    if (res.status === 401 && getToken()) setToken(null)
+
+    const error = new Error(errorMessage(data, res.status))
     error.status = res.status
     error.data = data
     throw error

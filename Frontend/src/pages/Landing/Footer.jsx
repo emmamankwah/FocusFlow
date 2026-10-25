@@ -61,7 +61,7 @@ export default function Footer() {
                       </a>
                     ) : (
                       <span
-                        className="cursor-default text-[0.86rem] text-dim/50"
+                        className="cursor-default text-[0.86rem] text-dim"
                         title="Coming soon"
                       >
                         {link.label}
