@@ -5,6 +5,7 @@ import { apiPost, setToken } from '@/lib/api'
 import { emailRules } from '@/lib/validation'
 import AuthLayout from '@/components/AuthLayout'
 import TextField from '@/components/TextField'
+import Checkbox from '@/components/Checkbox'
 import SubmitButton from '@/components/SubmitButton'
 import FormError from '@/components/FormError'
 
@@ -81,11 +82,8 @@ export default function Login() {
 
       <FormError message={apiError} />
 
-      <div className="flex items-center justify-between">
-        <label className="flex items-center gap-2">
-          <input type="checkbox" className="h-4 w-4 accent-amber" {...register('remember')} />
-          <span className="text-[0.8rem] text-dim">Remember me</span>
-        </label>
+      <div className="flex items-center justify-between gap-4">
+        <Checkbox id="remember" label="Remember me" registration={register('remember')} />
         <Link to="/forgot-password" className="font-medium text-amber hover:text-amber/80">
           Forgot password?
         </Link>

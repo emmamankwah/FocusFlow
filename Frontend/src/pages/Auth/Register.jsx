@@ -11,6 +11,7 @@ import {
 } from '@/lib/validation'
 import AuthLayout from '@/components/AuthLayout'
 import TextField from '@/components/TextField'
+import Checkbox from '@/components/Checkbox'
 import SubmitButton from '@/components/SubmitButton'
 import FormError from '@/components/FormError'
 
@@ -22,7 +23,7 @@ export default function Register() {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
-  } = useForm()
+  } = useForm({ defaultValues: { remember: true } })
 
   const onSubmit = async (data) => {
     setApiError(null)
@@ -38,6 +39,7 @@ export default function Register() {
       sessionStorage.removeItem('otpFlow')
       sessionStorage.removeItem('otpCode')
       sessionStorage.setItem('pendingOtpEmail', data.email)
+      sessionStorage.setItem('rememberSession', data.remember ? '1' : '0')
       navigate('/verify-otp')
     } catch (err) {
       setApiError(err.message || 'Registration failed')
@@ -116,6 +118,8 @@ export default function Register() {
         error={errors.confirmPassword}
         registration={register('confirmPassword', confirmPasswordRules)}
       />
+
+      <Checkbox id="remember" label="Remember me" registration={register('remember')} />
 
       <FormError message={apiError} />
 

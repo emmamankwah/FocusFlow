@@ -17,6 +17,9 @@ export default function VerifyOtp() {
 
   const [email] = useState(() => sessionStorage.getItem('pendingOtpEmail') || '')
   const [flow] = useState(() => sessionStorage.getItem('otpFlow'))
+  const [remember] = useState(
+    () => sessionStorage.getItem('rememberSession') !== '0',
+  )
 
   useEffect(() => {
     if (cooldown <= 0) return
@@ -90,9 +93,10 @@ export default function VerifyOtp() {
       const token = res?.token || res?.access_token
       sessionStorage.removeItem('pendingOtpEmail')
       sessionStorage.removeItem('otpFlow')
+      sessionStorage.removeItem('rememberSession')
 
       if (token) {
-        setToken(token)
+        setToken(token, remember)
         navigate('/')
       } else {
         navigate('/login', { state: { verified: true } })
