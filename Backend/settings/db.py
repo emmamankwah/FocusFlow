@@ -1,14 +1,17 @@
+"""PostgreSQL connections with the validated SSL settings."""
 
-import os
-import psycopg2
-from psycopg2.extras import RealDictCursor
-from dotenv import load_dotenv
 import logging
 
-logging = logging.getLogger(__name__)
-logging = logging.getLogger(__name__)
+import psycopg2
+from psycopg2.extras import RealDictCursor
+import os
+from dotenv import load_dotenv
 
 load_dotenv()
+
+logger = logging.getLogger(__name__)
+
+CONNECT_TIMEOUT_SECONDS = 3
 
 
 def database_connection():
@@ -18,12 +21,14 @@ def database_connection():
             database=os.getenv("DB_NAME"),
             user=os.getenv("DB_USER"),
             password=os.getenv("DB_PASSWORD"),
+            # Local Postgres usually accepts "prefer"; hosted databases should
+            # set DB_SSLMODE=require (or verify-full) in their environment.
+            sslmode=os.getenv("DB_SSLMODE"),
             cursor_factory=RealDictCursor,
-            connect_timeout=3
+            connect_timeout=CONNECT_TIMEOUT_SECONDS,
         )
         return connection
 
     except psycopg2.Error as e:
-        logging.error("Database connection error")
+        logger.error("Database connection error", exc_info=e)
         return None
-

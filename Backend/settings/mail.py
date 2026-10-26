@@ -7,7 +7,7 @@ import logging
 logging = logging.getLogger(__name__)
 load_dotenv()
 
-def send_email(to_email: str, subject: str, body: str) -> bool:
+def configure_email(to_email: str, subject: str, body: str) -> bool:
     """
     Sends an email using Gmail SMTP SSL.
     Returns True if successful, False otherwise.

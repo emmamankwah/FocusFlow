@@ -54,7 +54,9 @@ def save_pending_user(first_name, last_name, email, username, hash_password):
     connection = _connect()
     try:
         with connection.cursor() as cursor:
-          
+            # One pending row per email: re-staging replaces the old one
+            # instead of failing on a unique constraint.
+            cursor.execute("DELETE FROM pending_users WHERE email = %s", (email,),)
             cursor.execute(
                 """
                 INSERT INTO pending_users (first_name, last_name, email, username, password)
@@ -96,17 +98,17 @@ def delete_pending_user(email: str) -> None:
         connection.close()
 
 
-def save_otp(email: str, hash_otp: str, created_at, expired_at):
+def save_otp(email: str, hash_otp: str, created_at, expired_at, total_attempts: int):
     connection = _connect()
     try:
         with connection.cursor() as cursor:
             cursor.execute("DELETE FROM otp_table WHERE email = %s", (email,),)
             cursor.execute(
                 """
-                INSERT INTO otp_table (email, hash_otp, created_at, expired_at, attempts)
-                VALUES (%s, %s, %s, %s, 0)
+                INSERT INTO otp_table (email, hash_otp, created_at, expired_at, attempts, total_attempts)
+                VALUES (%s, %s, %s, %s, 0, %s)
                 """,
-                (email, hash_otp, created_at, expired_at),
+                (email, hash_otp, created_at, expired_at, total_attempts),
             )
         connection.commit()
     except Exception:

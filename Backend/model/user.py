@@ -12,12 +12,17 @@ from pydantic import (
     model_validator,
 )
 
-StrippedStr = Annotated[
-    str,
-    BeforeValidator(
-        lambda value: value.strip() if isinstance(value, str) else value
-    ),
-]
+
+def _strip(value):
+    """Trim surrounding whitespace before any other validation runs."""
+    return value.strip() if isinstance(value, str) else value
+
+
+StrippedStr = Annotated[str, BeforeValidator(_strip)]
+
+# Trim emails before validating them, so " user@example.com " and
+# "user@example.com" reach the database and the lookups as the same value.
+NormalizedEmail = Annotated[EmailStr, BeforeValidator(_strip)]
 
 
 class PasswordValidation(BaseModel):
@@ -51,15 +56,15 @@ class PasswordValidation(BaseModel):
         return value
 
 
-class UserLogin(PasswordValidation):
-    email: EmailStr = Field(max_length=255)
+class UserLogin(BaseModel):
+    email: NormalizedEmail = Field(max_length=255)
     password: str
 
 
 class UserRegister(PasswordValidation):
     firstName: StrippedStr = Field(min_length=1, max_length=100)
     lastName: StrippedStr = Field(min_length=1, max_length=100)
-    email: EmailStr = Field(min_length=1, max_length=255)
+    email: NormalizedEmail = Field(min_length=1, max_length=255)
     username: str 
     password: str
     confirmPassword: str 
@@ -75,35 +80,35 @@ class UserRegister(PasswordValidation):
 
 
 class ResetPassword(PasswordValidation):
-    email: EmailStr = Field(max_length=255)
+    email: NormalizedEmail = Field(max_length=255)
     otp: StrippedStr = Field(min_length=1)
     newPassword: str
 
 
 class ChangePassword(PasswordValidation):
-    email: EmailStr = Field(max_length=255)
+    email: NormalizedEmail = Field(max_length=255)
     oldPassword: str
     newPassword: str
 
 
 class OtpRequest(BaseModel):
-    email: EmailStr = Field(max_length=255)
+    email: NormalizedEmail = Field(max_length=255)
 
 
 class OtpVerification(BaseModel):
-    email: EmailStr = Field(max_length=255)
+    email: NormalizedEmail = Field(max_length=255)
     otp: StrippedStr = Field(min_length=1)
 
 
 class OtpResend(BaseModel):
-    email: EmailStr = Field(max_length=255)
+    email: NormalizedEmail = Field(max_length=255)
 
 
 class UserProfileUpdate(BaseModel):
     firstName: StrippedStr = Field(min_length=1, max_length=100)
     lastName: StrippedStr = Field(min_length=1, max_length=100)
     username: str
-    email: EmailStr = Field(max_length=255)
+    email: NormalizedEmail = Field(max_length=255)
 
 
 class TokenResponse(BaseModel):
@@ -116,4 +121,4 @@ class UserPublic(BaseModel):
     firstName: str
     lastName: str
     username: str
-    email: EmailStr
+    email: NormalizedEmail
