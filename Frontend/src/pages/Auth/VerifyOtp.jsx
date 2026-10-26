@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
 import { apiPost, setToken } from '@/lib/api'
+import AuthLayout from '@/components/AuthLayout'
 import FormError from '@/components/FormError'
+import SubmitButton from '@/components/SubmitButton'
 
 const LENGTH = 6
 
@@ -109,85 +111,85 @@ export default function VerifyOtp() {
   }
 
   return (
-    <main className="relative grid min-h-screen place-items-center overflow-hidden bg-canvas px-6 py-16 font-grotesk text-ink">
-      <div aria-hidden className="pointer-events-none absolute inset-0">
-        <div className="absolute -top-40 -left-32 h-[480px] w-[480px] rounded-full bg-amber/10 blur-3xl" />
-        <div className="absolute right-[-160px] bottom-[-160px] h-[460px] w-[460px] rounded-full bg-coral/10 blur-3xl" />
-      </div>
-
-      <div className="relative w-full max-w-md text-center">
-        <div className="mb-8">
-          <h1 className="text-[1.75rem] font-bold tracking-[-0.01em]">Verify your email</h1>
-          <p className="mt-2.5 text-[0.9rem] text-dim">
-            We&apos;ve sent a 6-digit code to <span className="text-ink">{email}</span>
-          </p>
-        </div>
-
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="flex justify-center gap-3" onPaste={handlePaste}>
-            {otp.map((digit, i) => (
-              <input
-                key={i}
-                ref={(el) => (inputs.current[i] = el)}
-                type="text"
-                inputMode="numeric"
-                autoComplete={i === 0 ? 'one-time-code' : 'off'}
-                maxLength={1}
-                value={digit}
-                autoFocus={i === 0}
-                onChange={(e) => handleChange(i, e.target.value)}
-                onKeyDown={(e) => handleKeyDown(i, e)}
-                aria-label={`Digit ${i + 1}`}
-                aria-invalid={apiError ? true : undefined}
-                className="h-14 w-12 rounded-[3px] border border-line bg-deck text-center font-mono text-lg text-ink outline-none transition-colors focus:border-amber/60 focus:ring-2 focus:ring-amber/20 sm:h-16 sm:w-14"
-              />
-            ))}
-          </div>
-
-          <FormError message={apiError} />
-
-          {resendMsg && (
-            <p
-              role="status"
-              className={`rounded-[3px] border px-3.5 py-2.5 text-[0.8rem] ${
-                resendMsg.type === 'success'
-                  ? 'border-cyan/30 bg-cyan/10 text-cyan'
-                  : 'border-coral/30 bg-coral/10 text-coral'
-              }`}
-            >
-              {resendMsg.text}
-            </p>
-          )}
-
-          <button
-            type="submit"
-            className="btn btn-primary w-full justify-center disabled:cursor-not-allowed disabled:opacity-50"
-            disabled={otp.some((d) => !d) || isSubmitting}
-          >
-            {isSubmitting ? 'Verifying...' : 'Verify'}
-          </button>
-        </form>
-
-        <p className="mt-6 text-[0.86rem] text-dim">
-          Didn&apos;t receive a code?{' '}
+    <AuthLayout
+      eyebrow="Account verification"
+      title="Verify your email"
+      subtitle={
+        <>
+          We&apos;ve sent a 6-digit code to <span className="text-ink">{email}</span>
+        </>
+      }
+      onSubmit={handleSubmit}
+      footer={
+        <>
+          Wrong email?{' '}
           <button
             type="button"
-            onClick={handleResend}
-            disabled={resending || cooldown > 0}
-            className="font-medium text-amber transition-colors hover:text-amber/80 disabled:cursor-not-allowed disabled:text-dim/50"
+            onClick={() => navigate(-1)}
+            className="font-medium text-amber transition-colors hover:text-amber/80"
           >
-            {resending ? 'Sending...' : cooldown > 0 ? `Resend in ${cooldown}s` : 'Resend'}
+            Go back
           </button>
-        </p>
+        </>
+      }
+    >
+      <div
+        className="flex justify-between gap-1.5 sm:gap-2.5"
+        onPaste={handlePaste}
+      >
+        {otp.map((digit, i) => (
+          <input
+            key={i}
+            ref={(el) => (inputs.current[i] = el)}
+            type="text"
+            inputMode="numeric"
+            autoComplete={i === 0 ? 'one-time-code' : 'off'}
+            maxLength={1}
+            value={digit}
+            autoFocus={i === 0}
+            onChange={(e) => handleChange(i, e.target.value)}
+            onKeyDown={(e) => handleKeyDown(i, e)}
+            aria-label={`Digit ${i + 1}`}
+            aria-invalid={apiError ? true : undefined}
+            className="h-14 w-full max-w-12 rounded-xl border border-line bg-deck/80 text-center font-mono text-lg text-ink outline-none transition-all duration-200 hover:border-dim/70 focus:border-amber/60 focus:bg-deck focus:ring-4 focus:ring-amber/10 sm:h-16"
+          />
+        ))}
+      </div>
 
+      <FormError message={apiError} />
+
+      {resendMsg && (
+        <p
+          role="status"
+          className={`rounded-xl border px-3.5 py-2.5 text-[0.8rem] ${
+            resendMsg.type === 'success'
+              ? 'border-cyan/30 bg-cyan/10 text-cyan'
+              : 'border-coral/30 bg-coral/10 text-coral'
+          }`}
+        >
+          {resendMsg.text}
+        </p>
+      )}
+
+      <SubmitButton
+        loading={isSubmitting}
+        loadingText="Verifying..."
+        disabled={otp.some((d) => !d)}
+      >
+        Verify code
+      </SubmitButton>
+
+      <p className="text-center text-[0.84rem] text-dim">
+        Didn&apos;t receive a code?{' '}
         <button
           type="button"
-          onClick={() => navigate(-1)}
-          className="mt-4 font-mono text-[0.72rem] text-dim uppercase transition-colors hover:text-ink"
+          onClick={handleResend}
+          disabled={resending || cooldown > 0}
+          className="font-medium text-amber transition-colors hover:text-amber/80 disabled:cursor-not-allowed disabled:text-dim/50"
         >
-          ← Back
+          {resending ? 'Sending...' : cooldown > 0 ? `Resend in ${cooldown}s` : 'Resend'}
         </button>
-      </div>
-    </main>
+      </p>
+    </AuthLayout>
   )
 }

@@ -37,6 +37,7 @@ export default function Login() {
 
   return (
     <AuthLayout
+      eyebrow="Account access"
       title="Welcome back"
       subtitle="Log in to your account"
       onSubmit={handleSubmit(onSubmit)}
@@ -52,7 +53,7 @@ export default function Login() {
       {state?.verified && (
         <p
           role="status"
-          className="rounded-[3px] border border-cyan/30 bg-cyan/10 px-3.5 py-2.5 text-[0.8rem] text-cyan"
+          className="rounded-xl border border-cyan/30 bg-cyan/10 px-3.5 py-2.5 text-[0.8rem] text-cyan"
         >
           Email verified — log in to continue.
         </p>

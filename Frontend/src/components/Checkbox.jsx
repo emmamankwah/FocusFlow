@@ -7,7 +7,7 @@ export default function Checkbox({ id, label, registration }) {
       <input id={id} type="checkbox" className="peer sr-only" {...registration} />
       <span
         aria-hidden
-        className="grid h-[18px] w-[18px] shrink-0 place-items-center rounded-[3px] border border-line bg-deck text-transparent transition-colors peer-checked:border-amber peer-checked:bg-amber peer-checked:text-[#171205] peer-focus-visible:ring-2 peer-focus-visible:ring-amber/30 peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-surface group-hover:border-dim"
+        className="grid h-[18px] w-[18px] shrink-0 place-items-center rounded-md border border-line bg-deck text-transparent transition-colors peer-checked:border-amber peer-checked:bg-amber peer-checked:text-[#171205] peer-focus-visible:ring-2 peer-focus-visible:ring-amber/30 peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-surface group-hover:border-dim"
       >
         <svg
           viewBox="0 0 16 16"

@@ -33,6 +33,7 @@ export default function ForgotPassword() {
 
   return (
     <AuthLayout
+      eyebrow="Account recovery"
       title="Forgot password?"
       subtitle="Enter your email and we'll send you a reset code"
       onSubmit={handleSubmit(onSubmit)}

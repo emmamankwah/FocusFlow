@@ -45,6 +45,7 @@ export default function ResetPassword() {
 
   return (
     <AuthLayout
+      eyebrow="Account recovery"
       title="Set new password"
       subtitle="Choose a strong password for your account"
       onSubmit={handleSubmit(onSubmit)}

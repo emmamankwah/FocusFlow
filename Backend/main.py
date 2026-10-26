@@ -2,10 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from routes.auth.auth_user import router as auth_router
-from settings.env import validate_settings
 
-# Fail at startup, with one readable message, instead of on the first request.
-validate_settings()
 
 app = FastAPI()
 

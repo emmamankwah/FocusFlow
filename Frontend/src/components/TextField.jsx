@@ -72,7 +72,7 @@ export default function TextField({
           autoFocus={autoFocus}
           aria-invalid={error ? true : undefined}
           aria-describedby={describedBy}
-          className={`w-full rounded-[3px] border border-line bg-deck px-3.5 py-2.5 text-[0.9rem] text-ink outline-none transition-colors placeholder:text-dim/60 focus:border-amber/60 focus:ring-2 focus:ring-amber/20 ${
+          className={`w-full rounded-xl border border-line bg-deck/80 px-3.5 py-2.5 text-[0.9rem] text-ink outline-none transition-all duration-200 placeholder:text-dim/60 hover:border-dim/70 focus:border-amber/60 focus:bg-deck focus:ring-4 focus:ring-amber/10 ${
             error ? 'border-coral/60' : ''
           } ${isPassword ? 'pr-11' : ''}`}
           {...registration}
@@ -84,7 +84,7 @@ export default function TextField({
             aria-label={show ? 'Hide password' : 'Show password'}
             aria-pressed={show}
             title={show ? 'Hide password' : 'Show password'}
-            className="absolute top-1/2 right-2 grid h-8 w-8 -translate-y-1/2 place-items-center rounded-[3px] text-dim transition-colors hover:text-ink focus-visible:ring-2 focus-visible:ring-amber/30"
+            className="absolute top-1/2 right-1.5 grid h-8 w-8 -translate-y-1/2 place-items-center rounded-lg text-dim transition-colors hover:bg-line/40 hover:text-ink focus-visible:ring-2 focus-visible:ring-amber/30"
           >
             {show ? <EyeOffIcon /> : <EyeIcon />}
           </button>

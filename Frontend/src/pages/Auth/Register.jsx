@@ -48,6 +48,7 @@ export default function Register() {
 
   return (
     <AuthLayout
+      eyebrow="Create account"
       title="Create your account"
       subtitle="Start planning smarter today"
       onSubmit={handleSubmit(onSubmit)}

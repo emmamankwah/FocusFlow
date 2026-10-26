@@ -26,7 +26,7 @@ def configure_email(to_email: str, subject: str, body: str) -> bool:
     msg.set_content(body)
 
     try:
-        with smtplib.SMTP_SSL(app_port) as server:
+        with smtplib.SMTP_SSL( int(os.getenv("SMTP_PORT"))) as server:
             server.login(sender, app_password)
             server.send_message(msg)
         return True
