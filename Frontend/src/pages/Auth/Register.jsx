@@ -9,6 +9,7 @@ import {
   usernameRules,
   PASSWORD_HINT,
 } from '@/lib/validation'
+import usePageTitle from '@/lib/usePageTitle'
 import AuthLayout from '@/components/AuthLayout'
 import TextField from '@/components/TextField'
 import Checkbox from '@/components/Checkbox'
@@ -16,6 +17,7 @@ import SubmitButton from '@/components/SubmitButton'
 import FormError from '@/components/FormError'
 
 export default function Register() {
+  usePageTitle('Create account — FocusFlow')
   const [apiError, setApiError] = useState(null)
   const navigate = useNavigate()
 

@@ -3,6 +3,7 @@ import { useForm } from 'react-hook-form'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { apiPost, setToken } from '@/lib/api'
 import { emailRules } from '@/lib/validation'
+import usePageTitle from '@/lib/usePageTitle'
 import AuthLayout from '@/components/AuthLayout'
 import TextField from '@/components/TextField'
 import Checkbox from '@/components/Checkbox'
@@ -10,6 +11,7 @@ import SubmitButton from '@/components/SubmitButton'
 import FormError from '@/components/FormError'
 
 export default function Login() {
+  usePageTitle('Log in — FocusFlow')
   const [apiError, setApiError] = useState(null)
   const navigate = useNavigate()
   const { state } = useLocation()
@@ -29,7 +31,7 @@ export default function Login() {
       })
       const token = res?.token || res?.access_token
       if (token) setToken(token, data.remember)
-      navigate('/')
+      navigate('/dashboard')
     } catch (err) {
       setApiError(err.message || 'Login failed')
     }

@@ -3,12 +3,14 @@ import { useForm } from 'react-hook-form'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { apiPost, setToken } from '@/lib/api'
 import { passwordRules, confirmPasswordRules, PASSWORD_HINT } from '@/lib/validation'
+import usePageTitle from '@/lib/usePageTitle'
 import AuthLayout from '@/components/AuthLayout'
 import TextField from '@/components/TextField'
 import SubmitButton from '@/components/SubmitButton'
 import FormError from '@/components/FormError'
 
 export default function ResetPassword() {
+  usePageTitle('Set a new password — FocusFlow')
   const [apiError, setApiError] = useState(null)
   const navigate = useNavigate()
 

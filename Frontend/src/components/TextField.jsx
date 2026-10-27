@@ -72,7 +72,7 @@ export default function TextField({
           autoFocus={autoFocus}
           aria-invalid={error ? true : undefined}
           aria-describedby={describedBy}
-          className={`w-full rounded-xl border border-line bg-deck/80 px-3.5 py-2.5 text-[0.9rem] text-ink outline-none transition-all duration-200 placeholder:text-dim/60 hover:border-dim/70 focus:border-amber/60 focus:bg-deck focus:ring-4 focus:ring-amber/10 ${
+          className={`w-full rounded-xl border border-line bg-deck/80 px-3.5 py-2.5 text-[0.9rem] text-ink outline-none transition-all duration-200 placeholder:text-dim hover:border-dim/70 focus:border-amber/60 focus:bg-deck focus:ring-4 focus:ring-amber/10 ${
             error ? 'border-coral/60' : ''
           } ${isPassword ? 'pr-11' : ''}`}
           {...registration}

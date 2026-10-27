@@ -7,7 +7,7 @@ const words = [
   'Habit Learning',
   'Smart Notifications',
   'Auto-nudges',
-  'Streak Tracking',
+  'Rest-Day Planning',
   'Weekly Insights',
 ]
 

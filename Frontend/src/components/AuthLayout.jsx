@@ -122,13 +122,13 @@ export default function AuthLayout({ eyebrow, title, subtitle, onSubmit, footer,
           <p className="font-mono text-[0.68rem] tracking-[0.2em] text-amber uppercase">
             The week, under control
           </p>
-          <h2 className="mt-4 text-[clamp(2.1rem,3.4vw,3rem)] leading-[1.04] font-bold tracking-[-0.02em]">
+          <p className="mt-4 text-[clamp(2.1rem,3.4vw,3rem)] leading-[1.04] font-bold tracking-[-0.02em]">
             Your week,{' '}
             <span className="animate-gradient-x bg-gradient-to-r from-amber via-coral to-amber bg-[length:220%_100%] bg-clip-text text-transparent">
               already planned
             </span>
             .
-          </h2>
+          </p>
           <p className="mt-4 max-w-[40ch] text-[0.95rem] leading-relaxed text-dim">
             FocusFlow reads your deadlines, free hours, habits and conflicts — then rebuilds
             today the moment anything changes.
@@ -167,6 +167,7 @@ export default function AuthLayout({ eyebrow, title, subtitle, onSubmit, footer,
 
             <form
               onSubmit={onSubmit}
+              noValidate
               className="relative space-y-4 overflow-hidden rounded-[24px] border border-line/80 bg-surface/80 p-6 shadow-[0_30px_90px_-40px_rgba(0,0,0,0.95)] backdrop-blur-xl sm:p-8"
             >
               <span

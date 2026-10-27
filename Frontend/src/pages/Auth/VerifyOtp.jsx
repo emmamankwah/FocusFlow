@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
 import { apiPost, setToken } from '@/lib/api'
+import usePageTitle from '@/lib/usePageTitle'
 import AuthLayout from '@/components/AuthLayout'
 import FormError from '@/components/FormError'
 import SubmitButton from '@/components/SubmitButton'
@@ -8,6 +9,7 @@ import SubmitButton from '@/components/SubmitButton'
 const LENGTH = 6
 
 export default function VerifyOtp() {
+  usePageTitle('Verify your email — FocusFlow')
   const [otp, setOtp] = useState(Array(LENGTH).fill(''))
   const [apiError, setApiError] = useState(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -70,7 +72,7 @@ export default function VerifyOtp() {
     try {
       await apiPost('/auth/resend-otp', { email })
       setResendMsg({ type: 'success', text: 'A new code is on its way.' })
-      setCooldown(30)
+      setCooldown(45)
     } catch (err) {
       setResendMsg({ type: 'error', text: err.message || 'Could not resend code' })
     } finally {
@@ -84,8 +86,16 @@ export default function VerifyOtp() {
     setApiError(null)
 
     if (flow === 'reset-password') {
-      sessionStorage.setItem('otpCode', code)
-      navigate('/reset-password')
+      setIsSubmitting(true)
+      try {
+        await apiPost('/auth/verify-reset-otp', { email, otp: code })
+        sessionStorage.setItem('otpCode', code)
+        navigate('/reset-password')
+      } catch (err) {
+        setApiError(err.message || 'Verification failed')
+      } finally {
+        setIsSubmitting(false)
+      }
       return
     }
 
@@ -99,7 +109,7 @@ export default function VerifyOtp() {
 
       if (token) {
         setToken(token, remember)
-        navigate('/')
+        navigate('/dashboard')
       } else {
         navigate('/login', { state: { verified: true } })
       }

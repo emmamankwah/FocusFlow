@@ -1,0 +1,110 @@
+.ffd-section {
+  scroll-margin-top: 24px;
+}
+
+.ffd-grid-bg {
+  background-image:
+    linear-gradient(to right, rgba(38, 44, 60, 0.32) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(38, 44, 60, 0.32) 1px, transparent 1px);
+  background-size: 48px 48px;
+  -webkit-mask-image: radial-gradient(ellipse at center, black, transparent 78%);
+  mask-image: radial-gradient(ellipse at center, black, transparent 78%);
+}
+
+.ffd-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+.ffd-ring-arc {
+  transition: stroke-dashoffset 1s linear;
+  filter: drop-shadow(0 0 7px rgba(242, 184, 75, 0.35));
+}
+
+.ffd-gauge-arc {
+  transition: stroke 0.3s ease;
+}
+
+.ffd-chart text {
+  font-family: var(--font-mono);
+}
+
+.ffd-chart .ffd-chart-label {
+  fill: var(--color-dim);
+  font-size: 10px;
+}
+
+.ffd-chart .ffd-chart-value {
+  fill: var(--color-ink);
+  font-size: 10px;
+  font-weight: 500;
+}
+
+.ffd-chart .ffd-chart-grid {
+  stroke: var(--color-line);
+  stroke-width: 1;
+}
+
+.ffd-chart .ffd-chart-goal {
+  stroke: var(--color-dim);
+  stroke-width: 1;
+  stroke-dasharray: 4 5;
+}
+
+.ffd-chart .ffd-chart-goal-label {
+  fill: var(--color-dim);
+  font-size: 9px;
+  letter-spacing: 0.08em;
+}
+
+.ffd-chart-wrap,
+.ffd-chat-log,
+.ffd-nav-scroll {
+  scrollbar-color: var(--color-line) transparent;
+  scrollbar-width: thin;
+}
+
+.ffd-chart-wrap::-webkit-scrollbar,
+.ffd-chat-log::-webkit-scrollbar,
+.ffd-nav-scroll::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.ffd-chart-wrap::-webkit-scrollbar-thumb,
+.ffd-chat-log::-webkit-scrollbar-thumb,
+.ffd-nav-scroll::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: var(--color-line);
+}
+
+.ffd-menu {
+  transform-origin: top right;
+  animation: ffd-menu-in 160ms ease-out;
+}
+
+@keyframes ffd-menu-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+  }
+}
+
+.ffd-addform input[type='time'] {
+  color-scheme: dark;
+}
+
+.ffd-toast {
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ffd-ring-arc,
+  .ffd-gauge-arc,
+  .ffd-menu,
+  .ffd-toast {
+    transition: none;
+    animation: none;
+  }
+}

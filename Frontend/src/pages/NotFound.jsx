@@ -1,6 +1,8 @@
 import { Link } from 'react-router-dom'
+import usePageTitle from '@/lib/usePageTitle'
 
 export default function NotFound() {
+  usePageTitle('Page not found — FocusFlow')
   return (
     <main className="relative grid min-h-screen place-items-center overflow-hidden bg-canvas px-6 py-16 text-center font-grotesk text-ink">
       <div aria-hidden className="pointer-events-none absolute inset-0">

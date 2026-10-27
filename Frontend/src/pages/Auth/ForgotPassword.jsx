@@ -3,12 +3,14 @@ import { useForm } from 'react-hook-form'
 import { Link, useNavigate } from 'react-router-dom'
 import { apiPost } from '@/lib/api'
 import { emailRules } from '@/lib/validation'
+import usePageTitle from '@/lib/usePageTitle'
 import AuthLayout from '@/components/AuthLayout'
 import TextField from '@/components/TextField'
 import SubmitButton from '@/components/SubmitButton'
 import FormError from '@/components/FormError'
 
 export default function ForgotPassword() {
+  usePageTitle('Forgot password — FocusFlow')
   const [apiError, setApiError] = useState(null)
   const navigate = useNavigate()
 
