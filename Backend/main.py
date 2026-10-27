@@ -37,6 +37,13 @@ app.include_router(auth_router)
 def home():
     return {"message": "FocusFlow API is running"}
 
+
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app)
+
+    uvicorn.run(
+        "main:app",
+        host="127.0.0.1",
+        port=8000,
+        reload=True,
+    )
