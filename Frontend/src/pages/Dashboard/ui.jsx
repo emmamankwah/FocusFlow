@@ -141,6 +141,77 @@ export function MenuIcon({ open = false, className = '' }) {
   )
 }
 
+export function CalendarIcon({ className = '' }) {
+  return (
+    <svg
+      viewBox="0 0 16 16"
+      aria-hidden="true"
+      className={className}
+      fill="none"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="1.6"
+    >
+      <rect x="2.5" y="3" width="11" height="9.5" rx="1.6" />
+      <path d="M5 2v2M11 2v2M2.5 6h11" />
+    </svg>
+  )
+}
+
+export function ClipboardIcon({ className = '' }) {
+  return (
+    <svg
+      viewBox="0 0 16 16"
+      aria-hidden="true"
+      className={className}
+      fill="none"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="1.6"
+    >
+      <rect x="4" y="3" width="8" height="10" rx="1.4" />
+      <path d="M6 3V2.5h4V3M6.8 7.2h2.4M6.8 9.6h2.4" />
+    </svg>
+  )
+}
+
+export function ChartIcon({ className = '' }) {
+  return (
+    <svg
+      viewBox="0 0 16 16"
+      aria-hidden="true"
+      className={className}
+      fill="none"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="1.6"
+    >
+      <path d="M3 12V5M6.5 12V7M10 12V4M13.5 12V9" />
+    </svg>
+  )
+}
+
+export function InboxIcon({ className = '' }) {
+  return (
+    <svg
+      viewBox="0 0 16 16"
+      aria-hidden="true"
+      className={className}
+      fill="none"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="1.6"
+    >
+      <path d="M2.5 6.5h4l.8 1.2h3.4l.8-1.2h4V12a1.2 1.2 0 0 1-1.2 1.2H3.7A1.2 1.2 0 0 1 2.5 12V6.5Z" />
+      <path d="M2.5 6.5 5 3h6l2.5 3.5" />
+    </svg>
+  )
+}
+
 export function SparkIcon({ className = '' }) {
   return (
     <svg

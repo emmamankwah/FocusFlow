@@ -3,6 +3,10 @@ export const FOCUS_GOAL_HOURS = 4
 export const WEEKLY_GOAL_HOURS = 25
 
 export const sections = [
+  { id: 'sec-motivation', label: 'Motivation' },
+  { id: 'sec-overview', label: 'Overview' },
+  { id: 'sec-modules', label: 'Modules' },
+  { id: 'sec-work', label: 'Work Inbox' },
   { id: 'sec-focus', label: 'Today' },
   { id: 'sec-ai', label: 'Suggestions' },
   { id: 'sec-deadlines', label: 'Deadlines' },
@@ -89,7 +93,7 @@ export function riskLabel(p) {
 }
 
 export function loadBoard(date = new Date()) {
-  const fresh = { done: {}, custom: [], sugs: {}, read: {}, extraMin: 0, timed: {} }
+  const fresh = { done: {}, custom: [], sugs: {}, read: {}, extraMin: 0, timed: {}, workQueue: [] }
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (!raw) return fresh
@@ -103,12 +107,14 @@ export function loadBoard(date = new Date()) {
         read: saved.read && typeof saved.read === 'object' ? saved.read : {},
         extraMin: Number.isFinite(saved.extraMin) ? saved.extraMin : 0,
         timed: saved.timed && typeof saved.timed === 'object' ? saved.timed : {},
+        workQueue: Array.isArray(saved.workQueue) ? saved.workQueue : [],
       }
     }
     return {
       ...fresh,
       sugs: saved.sugs && typeof saved.sugs === 'object' ? saved.sugs : {},
       read: saved.read && typeof saved.read === 'object' ? saved.read : {},
+      workQueue: Array.isArray(saved.workQueue) ? saved.workQueue : [],
     }
   } catch {
     return fresh
