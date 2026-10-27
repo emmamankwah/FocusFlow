@@ -7,6 +7,5 @@ google-auth-oauthlib
 pyotp
 python-jose[cryptography]
 passlib[argon2]
-EmailMessage
-pydantic
+psycopg2-binary
 pydantic[email]

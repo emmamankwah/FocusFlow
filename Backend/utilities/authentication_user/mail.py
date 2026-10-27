@@ -1,12 +1,12 @@
 from datetime import datetime, timedelta, timezone
 
 from settings.mail import configure_email
-from security.secure_users import secure_hash_otp
+from security.secure_users import create_secure_otp
 
 
 def create_verification_otp(expires_minutes: int) -> dict:
     """Return a fresh code plus the hash and expiry to persist for it."""
-    plain_otp, hashed_otp = secure_hash_otp()
+    plain_otp, hashed_otp = create_secure_otp()
     created_at = datetime.now(timezone.utc)
     return {
         "plain_otp": plain_otp,

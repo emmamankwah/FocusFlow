@@ -10,47 +10,46 @@ verified account.
 """
 
 import logging
+import os
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Dict
-import os 
-import dotenv
-from dotenv import load_dotenv
 
+from dotenv import load_dotenv
 
 from model.user import UserLogin, UserRegister
 from repository.authentication.user_repo import (
     clear_otp,
-    create_user,
     delete_pending_user,
     get_pending_user,
     get_user_by_email,
     get_user_by_username,
     get_user_otp,
     increment_attempts,
+    move_pending_user_to_users,
     save_otp,
     save_pending_user,
     update_user_password,
 )
 from security.rate_limit import SlidingWindowLimiter
 from security.secure_users import (
-    hash_password, 
+    hash_password,
     verify_password,
     secure_verify_otp,
-    secure_hash_otp
 )
-
 from utilities.authentication_user.mail import (
     create_verification_otp,
     send_verification_email,
 )
 
-load_dotenv()
+load_dotenv(Path(__file__).resolve().parents[2] / ".env")
 
-OTP_EXPIRE_MINUTES = os.getenv("OTP_EXPIRE_MINUTES")
-OTP_MAX_ATTEMPTS = os.getenv("OTP_MAX_ATTEMPTS", 3)
+OTP_EXPIRE_MINUTES = int(os.getenv("OTP_EXPIRE_MINUTES", "10"))
+OTP_MAX_ATTEMPTS = int(os.getenv("OTP_MAX_ATTEMPTS", "3"))
+OTP_SEND_COOLDOWN_SECONDS = int(os.getenv("OTP_SEND_COOLDOWN_SECONDS", "45"))
 
-# One code per email every 45 seconds, at most five per 15 minutes.
-OTP_SEND_COOLDOWN_SECONDS = os.getenv("OTP_SEND_COOLDOWN_SECONDS", 45)
+# One code per email every OTP_SEND_COOLDOWN_SECONDS, at most five per 15
+# minutes.
 OTP_SEND_LIMIT = 5
 OTP_SEND_WINDOW_SECONDS = 15 * 60
 
@@ -80,8 +79,7 @@ class OtpRateLimited(Exception):
 
 
 def _rate_limit_key(email: str) -> str:
-    # Case-fold the key so "User@x.com" cannot get a second budget.
-    return email.strip().lower()
+    return email.strip()
 
 
 def _wait_text(seconds: float) -> str:
@@ -258,6 +256,10 @@ def resend_otp(email: str) -> Dict[str, str]:
 
 def verify_otp(email: str, otp: str) -> Dict[str, str]:
     email = email.strip()
+
+    if not get_pending_user(email):
+        return {"error": "No registration found for this email."}
+
     error_check = check_otp(email, otp)
     if error_check:
         return {"error": error_check}
@@ -265,7 +267,7 @@ def verify_otp(email: str, otp: str) -> Dict[str, str]:
     # Promote first, clear second: if the promotion fails the code is still
     # valid and the user can retry instead of having to register again.
     try:
-        create_user(email)
+        move_pending_user_to_users(email)
     except ValueError:
         return {"error": "No registration found for this email."}
     except Exception:
@@ -278,7 +280,7 @@ def verify_otp(email: str, otp: str) -> Dict[str, str]:
 
 
 def reset_password(email: str, otp: str, new_password: str) -> Dict[str, str]:
-    email = email.strip().lower()
+    email = email.strip()
 
     if not get_user_by_email(email):
         return {"error": "Invalid email."}

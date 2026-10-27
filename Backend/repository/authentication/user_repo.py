@@ -77,10 +77,42 @@ def get_pending_user(email: str) -> dict | None:
     try:
         with connection.cursor(cursor_factory=RealDictCursor) as cursor:
             cursor.execute(
-                "select email from pending_users where email = %s",
+                "SELECT email FROM pending_users WHERE email = %s",
                 (email,),
             )
             return cursor.fetchone()
+    finally:
+        connection.close()
+
+
+def move_pending_user_to_users(email: str) -> None:
+    connection = _connect()
+    try:
+        with connection.cursor(cursor_factory=RealDictCursor) as cursor:
+            cursor.execute(
+                "SELECT first_name, last_name, email, username, password "
+                "FROM pending_users WHERE email = %s",
+                (email,),
+            )
+            pending_user = cursor.fetchone()
+            if not pending_user:
+                raise ValueError("No pending user found for this email.")
+            cursor.execute(
+                "INSERT INTO users (first_name, last_name, email, username, password) "
+                "VALUES (%s, %s, %s, %s, %s)",
+                (
+                    pending_user["first_name"],
+                    pending_user["last_name"],
+                    pending_user["email"],
+                    pending_user["username"],
+                    pending_user["password"],
+                ),
+            )
+            cursor.execute("DELETE FROM pending_users WHERE email = %s", (email,),)
+        connection.commit()
+    except Exception:
+        connection.rollback()
+        raise
     finally:
         connection.close()
 
