@@ -9,7 +9,7 @@ pwd_context = CryptContext(
     deprecated="auto",
 )
 
-MAX_PASSWORD_LENGTH = 60
+MAX_PASSWORD_LENGTH = 128
 MAX_OTP_LENGTH = 6
 
 

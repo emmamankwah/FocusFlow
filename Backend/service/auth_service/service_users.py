@@ -17,12 +17,18 @@ from typing import Dict
 
 from dotenv import load_dotenv
 
-from model.user import UserLogin, UserRegister
+from model.user import (
+    UserLogin,
+    UserProfileUpdate,
+    UserPublic,
+    UserRegister,
+)
 from repository.authentication.user_repo import (
     clear_otp,
     delete_pending_user,
     get_pending_user,
     get_user_by_email,
+    get_user_by_id,
     get_user_by_username,
     get_user_otp,
     increment_attempts,
@@ -30,6 +36,8 @@ from repository.authentication.user_repo import (
     save_otp,
     save_pending_user,
     update_user_password,
+    update_user_password_by_id,
+    update_user_profile,
 )
 from security.rate_limit import SlidingWindowLimiter
 from security.secure_users import (
@@ -37,6 +45,7 @@ from security.secure_users import (
     verify_password,
     secure_verify_otp,
 )
+from security.token import create_access_token
 from utilities.authentication_user.mail import (
     create_verification_otp,
     send_verification_email,
@@ -212,12 +221,92 @@ def login_user(user: UserLogin) -> Dict[str, str]:
     if not verify_password(user.password, existing_user["password"]):
         return {"error": "Invalid email or password."}
 
-    return {"message": "Login successful."}
+    token = create_access_token(str(existing_user["id"]))
+    return {
+        "message": "Login successful.",
+        "access_token": token,
+        "token_type": "bearer",
+    }
+
+
+def get_profile(user_id: int) -> Dict[str, object]:
+    user = get_user_by_id(user_id)
+
+    if not user:
+        return {"error": "User not found."}
+
+    profile = UserPublic(
+        id=user["id"],
+        firstName=user["first_name"],
+        lastName=user["last_name"],
+        username=user["username"],
+        email=user["email"],
+    )
+    return profile.model_dump()
+
+
+def update_profile(
+    user_id: int,
+    user_data: UserProfileUpdate,
+) -> Dict[str, object]:
+    user = get_user_by_id(user_id)
+
+    if not user:
+        return {"error": "User not found."}
+
+    email = user_data.email.strip()
+    username = user_data.username.strip()
+
+    if not username:
+        return {"error": "Username cannot be empty."}
+
+    if email != user["email"]:
+        if get_user_by_email(email) or get_pending_user(email):
+            return {"error": "Email already in use."}
+
+    existing_username = get_user_by_username(username)
+    if existing_username and existing_username["id"] != user_id:
+        return {"error": "Username already taken."}
+
+    update_user_profile(
+        user_id,
+        user_data.firstName,
+        user_data.lastName,
+        username,
+        email,
+    )
+    return get_profile(user_id)
+
+
+def change_password(
+    user_id: int,
+    email: str,
+    old_password: str,
+    new_password: str,
+) -> Dict[str, str]:
+    user = get_user_by_id(user_id)
+
+    if not user:
+        return {"error": "User not found."}
+
+    if email.strip() != user["email"]:
+        return {"error": "Email does not match the signed-in account."}
+
+    if not verify_password(old_password, user["password"]):
+        return {"error": "Current password is incorrect."}
+
+    update_user_password_by_id(user_id, hash_password(new_password))
+    return {"message": "Password changed successfully."}
 
 
 def request_otp(email: str) -> Dict[str, str]:
-    """Send a verification/reset code, throttled per email."""
+    """Send a reset code only when the account exists."""
     email = email.strip()
+
+    if not get_user_by_email(email):
+        return {
+            "message": "If that email is registered, a verification code has been sent."
+        }
 
     try:
         send_verification_mail(email)
@@ -230,14 +319,32 @@ def request_otp(email: str) -> Dict[str, str]:
         logger.exception("Could not send verification email to %s", email)
         return {"error": "Could not send the verification email. Please try again."}
 
-    return {"message": "Verification code sent. Check your email."}
+    return {
+        "message": "If that email is registered, a verification code has been sent."
+    }
+
+
+def verify_reset_otp(email: str, otp: str) -> Dict[str, str]:
+    email = email.strip()
+
+    if not get_user_by_email(email):
+        return {"error": "No active verification code. Request a new one."}
+
+    error_check = check_otp(email, otp)
+    if error_check:
+        return {"error": error_check}
+
+    return {"message": "Verification code accepted."}
 
 
 def resend_otp(email: str) -> Dict[str, str]:
     email = email.strip()
 
-   
     if get_user_otp(email) is None:
+        return {"error": "No registration found for this email."}
+
+    if not get_pending_user(email) and not get_user_by_email(email):
+        clear_otp(email)
         return {"error": "No registration found for this email."}
 
     try:

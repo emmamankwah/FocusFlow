@@ -15,7 +15,25 @@ def get_user_by_email(email:str) -> dict |None:
     connection = _connect()
     try:
         with connection.cursor(cursor_factory=RealDictCursor) as cursor:
-            cursor.execute("SELECT email,username,password FROM users WHERE email = %s", (email,))
+            cursor.execute(
+                "SELECT id, first_name, last_name, email, username, password "
+                "FROM users WHERE email = %s",
+                (email,),
+            )
+            return cursor.fetchone()
+    finally:
+        connection.close()
+
+
+def get_user_by_id(user_id: int) -> dict | None:
+    connection = _connect()
+    try:
+        with connection.cursor(cursor_factory=RealDictCursor) as cursor:
+            cursor.execute(
+                "SELECT id, first_name, last_name, email, username, password "
+                "FROM users WHERE id = %s",
+                (user_id,),
+            )
             return cursor.fetchone()
     finally:
         connection.close()
@@ -25,7 +43,10 @@ def get_user_by_username(username: str) -> dict | None:
     connection = _connect()
     try:
         with connection.cursor(cursor_factory=RealDictCursor) as cursor:
-            cursor.execute("SELECT email,username,password FROM users WHERE username = %s", (username,))
+            cursor.execute(
+                "SELECT id, email, username, password FROM users WHERE username = %s",
+                (username,),
+            )
             return cursor.fetchone()
     finally:
         connection.close()
@@ -205,6 +226,39 @@ def update_user_password(email: str, hashed_password: str):
             cursor.execute(
                 "UPDATE users SET password = %s WHERE email = %s",
                 (hashed_password, email),
+            )
+        connection.commit()
+    except Exception:
+        connection.rollback()
+        raise
+    finally:
+        connection.close()
+
+
+def update_user_password_by_id(user_id: int, hashed_password: str):
+    connection = _connect()
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "UPDATE users SET password = %s WHERE id = %s",
+                (hashed_password, user_id),
+            )
+        connection.commit()
+    except Exception:
+        connection.rollback()
+        raise
+    finally:
+        connection.close()
+
+
+def update_user_profile(user_id: int, first_name, last_name, username, email):
+    connection = _connect()
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "UPDATE users SET first_name = %s, last_name = %s, "
+                "username = %s, email = %s WHERE id = %s",
+                (first_name, last_name, username, email, user_id),
             )
         connection.commit()
     except Exception:
