@@ -3,9 +3,7 @@ import {
   BTN_PRIMARY,
   BTN_QUIET,
   Panel,
-  SectionLabel,
   SendIcon,
-  SparkIcon,
   cx,
 } from './ui.jsx'
 
@@ -165,22 +163,6 @@ export function ChatSection({
   if (variant === 'full') {
     return (
       <div className="flex min-h-0 flex-1 flex-col">
-        <div className="mb-4 flex shrink-0 flex-wrap items-start justify-between gap-3">
-          <div>
-            <SectionLabel className="text-amber/85">AI Planner</SectionLabel>
-            <h1 className="mt-1.5 font-grotesk text-[1.55rem] leading-tight font-bold tracking-[-0.03em] text-ink sm:text-[2.1rem]">
-              Ask FocusFlow AI
-            </h1>
-            <p className="mt-1 hidden max-w-2xl text-[0.84rem] leading-relaxed text-dim sm:block">
-              Your personal productivity coach. Ask for advice on your plan, deadlines, workload, or what to focus on next.
-            </p>
-          </div>
-          <div className="hidden items-center gap-2 rounded-full border border-amber/30 bg-amber/10 px-3 py-1 text-[0.72rem] font-semibold text-amber sm:flex">
-            <SparkIcon className="h-3.5 w-3.5" />
-            Live AI · planner context
-          </div>
-        </div>
-
         <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
           <Panel title="Conversation" hint="Planner chat" className="flex min-h-0 flex-col">
             <div
@@ -347,7 +329,7 @@ export function ChatSection({
             </p>
           </Panel>
 
-          <div className="hidden min-h-0 flex-col gap-4 overflow-y-auto pr-1 lg:flex">
+          <div className="hidden min-h-0 flex-col gap-4 lg:flex">
             <Panel title="Quick prompts" hint="Get started" className="shrink-0">
               <div className="flex flex-wrap gap-1.5">
                 {quickPrompts.map((prompt) => (
@@ -375,8 +357,8 @@ export function ChatSection({
               </ul>
             </Panel>
 
-            <Panel title="Recent" hint="Latest messages" className="shrink-0">
-              <div className="space-y-2">
+            <Panel title="Recent" hint="Latest messages" className="flex min-h-0 flex-1 flex-col">
+              <div className="ffd-chat-log min-h-0 flex-1 space-y-2 overflow-y-auto pr-1">
                 {recent.length === 0 && <p className="text-[0.8rem] text-dim">No messages yet.</p>}
                 {recent.map((message, index) => (
                   <div
