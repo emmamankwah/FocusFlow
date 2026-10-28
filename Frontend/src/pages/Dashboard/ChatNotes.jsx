@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   BTN_PRIMARY,
   BTN_QUIET,
@@ -97,6 +97,26 @@ function ListIcon({ className = '' }) {
   )
 }
 
+function TypingBubble() {
+  return (
+    <div
+      role="status"
+      aria-label="Assistant is thinking"
+      className="mr-auto flex w-fit items-center gap-1.5 rounded-xl rounded-tl-sm border border-line bg-deck px-3.5 py-2.5"
+    >
+      <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-dim" />
+      <span
+        className="h-1.5 w-1.5 animate-bounce rounded-full bg-dim"
+        style={{ animationDelay: '120ms' }}
+      />
+      <span
+        className="h-1.5 w-1.5 animate-bounce rounded-full bg-dim"
+        style={{ animationDelay: '240ms' }}
+      />
+    </div>
+  )
+}
+
 export function ChatSection({
   messages,
   chatInput,
@@ -105,6 +125,7 @@ export function ChatSection({
   onAsk,
   logRef,
   variant = 'panel',
+  pending = false,
   onAttach,
   onVoice,
   onDeepSearch,
@@ -156,7 +177,7 @@ export function ChatSection({
           </div>
           <div className="flex items-center gap-2 rounded-full border border-amber/30 bg-amber/10 px-3 py-1 text-[0.72rem] font-semibold text-amber">
             <SparkIcon className="h-3.5 w-3.5" />
-            Local demo · rule-based
+            Live AI · planner context
           </div>
         </div>
 
@@ -182,6 +203,7 @@ export function ChatSection({
                   {message.text}
                 </div>
               ))}
+              {pending && <TypingBubble />}
             </div>
 
             <form className="mt-4 flex flex-wrap items-center gap-2" onSubmit={onSend} aria-label="Ask the planner">
@@ -300,10 +322,11 @@ export function ChatSection({
                   id="ffd-chat-input-full"
                   value={chatInput}
                   onChange={(e) => onChatInput(e.target.value)}
-                  placeholder="Ask about your week, deadlines, or workload..."
+                  placeholder={pending ? 'Thinking…' : 'Ask about your week, deadlines, or workload...'}
                   autoComplete="off"
                   maxLength={220}
-                  className="min-w-0 flex-1 border-0 bg-transparent px-2 py-1 text-[0.84rem] text-ink placeholder:text-dim outline-none"
+                  disabled={pending}
+                  className="min-w-0 flex-1 border-0 bg-transparent px-2 py-1 text-[0.84rem] text-ink placeholder:text-dim outline-none disabled:cursor-not-allowed"
                 />
                 <button
                   type="button"
@@ -314,13 +337,13 @@ export function ChatSection({
                   <MicIcon className="h-4 w-4" />
                 </button>
               </div>
-              <button type="submit" className={BTN_PRIMARY} aria-label="Send message">
+              <button type="submit" className={BTN_PRIMARY} aria-label="Send message" disabled={pending}>
                 <SendIcon className="h-3.5 w-3.5" />
                 <span className="hidden sm:inline">Send</span>
               </button>
             </form>
             <p className="mt-2 font-mono text-[0.54rem] tracking-[0.1em] text-dim uppercase">
-              Attach · Photos · Files · Documents · Deep search · Web search · Priorities · Voice (local demo)
+              Attach · Photos · Files · Documents · Deep search · Web search · Priorities · Voice (demo)
             </p>
           </Panel>
 
@@ -332,7 +355,8 @@ export function ChatSection({
                     key={prompt}
                     type="button"
                     onClick={() => onAsk(prompt)}
-                    className="min-h-[28px] rounded-full border border-line px-3 py-1 text-[0.72rem] font-semibold text-dim transition hover:border-amber/50 hover:text-amber"
+                    disabled={pending}
+                    className="min-h-[28px] rounded-full border border-line px-3 py-1 text-[0.72rem] font-semibold text-dim transition hover:border-amber/50 hover:text-amber disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {prompt}
                   </button>
@@ -400,6 +424,7 @@ export function ChatSection({
             {message.text}
           </div>
         ))}
+        {pending && <TypingBubble />}
       </div>
 
       <div className="mt-3 flex flex-wrap gap-1.5">
@@ -408,7 +433,8 @@ export function ChatSection({
             key={prompt}
             type="button"
             onClick={() => onAsk(prompt)}
-            className="min-h-[26px] rounded-full border border-line px-3 py-1 text-[0.68rem] font-semibold text-dim transition hover:border-amber/50 hover:text-amber"
+            disabled={pending}
+            className="min-h-[26px] rounded-full border border-line px-3 py-1 text-[0.68rem] font-semibold text-dim transition hover:border-amber/50 hover:text-amber disabled:cursor-not-allowed disabled:opacity-50"
           >
             {prompt}
           </button>
@@ -423,19 +449,20 @@ export function ChatSection({
           id="ffd-chat-input"
           value={chatInput}
           onChange={(e) => onChatInput(e.target.value)}
-          placeholder="Ask about your week..."
+          placeholder={pending ? 'Thinking…' : 'Ask about your week...'}
           autoComplete="off"
           maxLength={160}
-          className={CHAT_FIELD}
+          disabled={pending}
+          className={`${CHAT_FIELD} disabled:cursor-not-allowed`}
         />
-        <button type="submit" className={BTN_PRIMARY} aria-label="Send message">
+        <button type="submit" className={BTN_PRIMARY} aria-label="Send message" disabled={pending}>
           <SendIcon className="h-3.5 w-3.5" />
           <span className="hidden sm:inline">Send</span>
         </button>
       </form>
 
       <p className="mt-2 font-mono text-[0.56rem] tracking-[0.1em] text-dim uppercase">
-        Local demo · replies are rule-based
+        Replies use your planner context
       </p>
     </Panel>
   )

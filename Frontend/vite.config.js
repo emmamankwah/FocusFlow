@@ -17,6 +17,7 @@ export default defineConfig({
     port: 3000,
     proxy: {
       '/auth': { target: API_TARGET, changeOrigin: true },
+      '/ai': { target: API_TARGET, changeOrigin: true },
       '/api': { target: API_TARGET, changeOrigin: true },
     },
   },

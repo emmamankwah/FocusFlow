@@ -5,7 +5,6 @@ import '../Dashboard/dashboard.css'
 import {
   FOCUS_GOAL_HOURS,
   baseTasks,
-  chatReply,
   fmtLongDate,
   getChartData,
   getRisks,
@@ -15,6 +14,7 @@ import {
   makeSuggestions,
   saveBoard,
 } from '../Dashboard/data.js'
+import { buildPlannerContext, sendPlannerMessage } from '@/lib/ai'
 import {
   BrandMark,
   BTN,
@@ -196,6 +196,7 @@ export default function AiPlanner() {
 
   const [chat, setChat] = useState(INITIAL_CHAT)
   const [chatInput, setChatInput] = useState('')
+  const [chatPending, setChatPending] = useState(false)
   const chatTimer = useRef(null)
   const chatLogRef = useRef(null)
 
@@ -207,7 +208,6 @@ export default function AiPlanner() {
     () => [...baseTasks, ...board.custom].sort((a, b) => a.t.localeCompare(b.t)),
     [board.custom],
   )
-  const heroTask = allTasks.find((task) => task.type === 'focus' && !board.done[task.id]) ?? null
   const score = board.sugs.s2 === 'done' ? 33 : 41
   const unread = notes.filter((note) => !board.read[note.id]).length
 
@@ -230,27 +230,44 @@ export default function AiPlanner() {
   }, [chat])
 
   const ask = useCallback(
-    (raw) => {
+    async (raw) => {
       const question = raw.trim()
-      if (!question) return
-      setChat((prev) => [...prev, { role: 'user', text: question }])
-      clearTimeout(chatTimer.current)
-      const context = {
-        firstFocus: heroTask,
+      if (!question || chatPending) return
+
+      const nextMessages = [...chat, { role: 'user', text: question }]
+      setChat(nextMessages)
+      setChatPending(true)
+
+      const context = buildPlannerContext({
+        dateLabel: fmtLongDate(today),
         score,
-        labRisk: risks[0],
         restPlanned: board.sugs.s2 === 'done',
+        pendingTasks: allTasks.filter((task) => !board.done[task.id]),
+        risks,
+      })
+
+      try {
+        const reply = await sendPlannerMessage(nextMessages, context)
+        setChat((prev) => [...prev, { role: 'ai', text: reply }])
+      } catch {
+        setChat((prev) => [
+          ...prev,
+          {
+            role: 'ai',
+            error: true,
+            text: 'I could not reach the AI service. Check that the backend is running, then try again.',
+          },
+        ])
+      } finally {
+        setChatPending(false)
       }
-      chatTimer.current = setTimeout(() => {
-        setChat((prev) => [...prev, { role: 'ai', text: chatReply(question, context) }])
-      }, 360)
     },
-    [heroTask, score, risks, board.sugs.s2],
+    [allTasks, board.done, board.sugs.s2, chat, chatPending, risks, score, today],
   )
 
   function handleSend(event) {
     event.preventDefault()
-    if (!chatInput.trim()) return
+    if (!chatInput.trim() || chatPending) return
     ask(chatInput)
     setChatInput('')
   }
@@ -359,6 +376,7 @@ export default function AiPlanner() {
             onSend={handleSend}
             onAsk={ask}
             logRef={chatLogRef}
+            pending={chatPending}
             variant="full"
             onAttach={handleAttach}
             onVoice={handleVoice}
