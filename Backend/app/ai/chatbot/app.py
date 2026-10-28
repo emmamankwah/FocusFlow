@@ -1,7 +1,34 @@
-from fastapi import FastAPI
+"""AI chatbot routes.
+
+The same routes are exposed two ways:
+
+- ``router`` is mounted by ``main.py`` at ``/ai``, so the running API serves
+  ``GET /ai/health`` and ``POST /ai/chat``.
+- ``app`` keeps the chatbot runnable on its own:
+  ``uvicorn app.ai.chatbot.app:app``.
+"""
+
+from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from . import chat_service, models
+
+router = APIRouter(tags=["ai"])
+
+
+@router.get("/health")
+def health() -> dict:
+    return {"status": "ok"}
+
+
+@router.post("/chat")
+def chat(request: models.ChatRequest) -> models.ChatResponse:
+    reply = chat_service.get_reply(
+        messages=request.messages,
+        context=request.context,
+    )
+    return models.ChatResponse(reply=reply)
+
 
 app = FastAPI(
     title="AI Chatbot API",
@@ -17,16 +44,4 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
-@app.get("/health")
-def health() -> dict:
-    return {"status": "ok"}
-
-
-@app.post("/chat")
-def chat(request: models.ChatRequest) -> models.ChatResponse:
-    reply = chat_service.get_reply(
-        messages=request.messages,
-        context=request.context,
-    )
-    return models.ChatResponse(reply=reply)
+app.include_router(router)

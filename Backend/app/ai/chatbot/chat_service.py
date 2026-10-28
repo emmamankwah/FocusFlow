@@ -1,10 +1,12 @@
 import os
+from pathlib import Path
 
 from dotenv import load_dotenv
 from openai import OpenAI
 from openai.types.chat import ChatCompletionMessageParam
 
-load_dotenv()
+# Backend/.env (parents: chatbot -> ai -> app -> Backend).
+load_dotenv(Path(__file__).resolve().parents[3] / ".env")
 
 DEFAULT_SYSTEM_PROMPT = (
     "You are a helpful AI assistant. Answer clearly and concisely."
@@ -37,6 +39,7 @@ def get_client() -> OpenAI:
     return OpenAI(
         api_key=os.environ.get("OPENAI_API_KEY"),
         base_url=os.environ.get("OPENAI_BASE_URL"),
+        timeout=60.0,
     )
 
 
