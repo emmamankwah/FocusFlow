@@ -2,7 +2,7 @@
 
 from passlib.context import CryptContext
 
-from authentication.utilities.authentication_user.otp import generate_otp
+from app.authentication.utilities.authentication_user.otp import generate_otp
 
 pwd_context = CryptContext(
     schemes=["argon2"],

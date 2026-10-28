@@ -1,6 +1,6 @@
 import logging
 from psycopg2.extras import RealDictCursor
-from authentication.settings.db import database_connection
+from app.authentication.settings.db import database_connection
 
 
 

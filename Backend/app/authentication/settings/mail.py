@@ -7,7 +7,7 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-load_dotenv(Path(__file__).resolve().parents[2] / ".env")
+load_dotenv(Path(__file__).resolve().parents[3] / ".env")
 
 APP_NAME = os.getenv("APP_NAME", "FocusFlow")
 GMAIL_USER = os.getenv("GMAIL_USER", "")

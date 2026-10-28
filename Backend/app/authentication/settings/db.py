@@ -8,7 +8,7 @@ import psycopg2
 from dotenv import load_dotenv
 from psycopg2.extras import RealDictCursor
 
-load_dotenv(Path(__file__).resolve().parents[2] / ".env")
+load_dotenv(Path(__file__).resolve().parents[3] / ".env")
 
 DB_HOST = os.getenv("DB_HOST")
 DB_NAME = os.getenv("DB_NAME")

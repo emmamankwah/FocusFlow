@@ -8,7 +8,7 @@ from typing import Any
 from dotenv import load_dotenv
 from jose import JWTError, jwt
 
-load_dotenv(Path(__file__).resolve().parents[2] / ".env")
+load_dotenv(Path(__file__).resolve().parents[3] / ".env")
 
 JWT_ALGORITHM = "HS256"
 JWT_SECRET = os.getenv("JWT_SECRET", "")
