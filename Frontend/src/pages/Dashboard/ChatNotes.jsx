@@ -164,31 +164,31 @@ export function ChatSection({
 
   if (variant === 'full') {
     return (
-      <div className="relative">
-        <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
+      <div className="flex min-h-0 flex-1 flex-col">
+        <div className="mb-4 flex shrink-0 flex-wrap items-start justify-between gap-3">
           <div>
             <SectionLabel className="text-amber/85">AI Planner</SectionLabel>
-            <h1 className="mt-2 font-grotesk text-[1.8rem] leading-tight font-bold tracking-[-0.03em] text-ink sm:text-[2.2rem]">
+            <h1 className="mt-1.5 font-grotesk text-[1.55rem] leading-tight font-bold tracking-[-0.03em] text-ink sm:text-[2.1rem]">
               Ask FocusFlow AI
             </h1>
-            <p className="mt-1 max-w-2xl text-[0.84rem] leading-relaxed text-dim">
+            <p className="mt-1 hidden max-w-2xl text-[0.84rem] leading-relaxed text-dim sm:block">
               Your personal productivity coach. Ask for advice on your plan, deadlines, workload, or what to focus on next.
             </p>
           </div>
-          <div className="flex items-center gap-2 rounded-full border border-amber/30 bg-amber/10 px-3 py-1 text-[0.72rem] font-semibold text-amber">
+          <div className="hidden items-center gap-2 rounded-full border border-amber/30 bg-amber/10 px-3 py-1 text-[0.72rem] font-semibold text-amber sm:flex">
             <SparkIcon className="h-3.5 w-3.5" />
             Live AI · planner context
           </div>
         </div>
 
-        <div className="grid gap-5 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
-          <Panel title="Conversation" hint="Planner chat" className="flex flex-col">
+        <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
+          <Panel title="Conversation" hint="Planner chat" className="flex min-h-0 flex-col">
             <div
               ref={logRef}
               role="log"
               aria-live="polite"
               aria-label="Planner conversation"
-              className="ffd-chat-log h-[420px] space-y-2.5 overflow-y-auto pr-1 sm:h-[520px]"
+              className="ffd-chat-log min-h-0 flex-1 space-y-2.5 overflow-y-auto pr-1"
             >
               {messages.map((message, index) => (
                 <div
@@ -206,7 +206,7 @@ export function ChatSection({
               {pending && <TypingBubble />}
             </div>
 
-            <form className="mt-4 flex flex-wrap items-center gap-2" onSubmit={onSend} aria-label="Ask the planner">
+            <form className="mt-3 flex shrink-0 flex-wrap items-center gap-2" onSubmit={onSend} aria-label="Ask the planner">
               <div className="flex min-w-0 flex-1 items-center gap-1 rounded-xl border border-line bg-canvas/60 px-1.5 py-1">
                 <div className="relative">
                   <button
@@ -342,13 +342,13 @@ export function ChatSection({
                 <span className="hidden sm:inline">Send</span>
               </button>
             </form>
-            <p className="mt-2 font-mono text-[0.54rem] tracking-[0.1em] text-dim uppercase">
+            <p className="mt-1.5 shrink-0 font-mono text-[0.54rem] tracking-[0.1em] text-dim uppercase">
               Attach · Photos · Files · Documents · Deep search · Web search · Priorities · Voice (demo)
             </p>
           </Panel>
 
-          <div className="space-y-5">
-            <Panel title="Quick prompts" hint="Get started">
+          <div className="hidden min-h-0 flex-col gap-4 overflow-y-auto pr-1 lg:flex">
+            <Panel title="Quick prompts" hint="Get started" className="shrink-0">
               <div className="flex flex-wrap gap-1.5">
                 {quickPrompts.map((prompt) => (
                   <button
@@ -364,7 +364,7 @@ export function ChatSection({
               </div>
             </Panel>
 
-            <Panel title="What it can do" hint="Capabilities">
+            <Panel title="What it can do" hint="Capabilities" className="shrink-0">
               <ul className="space-y-2">
                 {CAPABILITIES.map((item) => (
                   <li key={item} className="flex items-start gap-2 text-[0.8rem] text-ink">
@@ -375,7 +375,7 @@ export function ChatSection({
               </ul>
             </Panel>
 
-            <Panel title="Recent" hint="Latest messages">
+            <Panel title="Recent" hint="Latest messages" className="shrink-0">
               <div className="space-y-2">
                 {recent.length === 0 && <p className="text-[0.8rem] text-dim">No messages yet.</p>}
                 {recent.map((message, index) => (

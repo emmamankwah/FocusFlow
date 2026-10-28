@@ -357,7 +357,7 @@ export default function AiPlanner() {
   }
 
   return (
-    <div id="dashboard" className="ff-dashboard ff-app relative min-h-screen bg-canvas font-sans text-ink">
+    <div id="dashboard" className="ff-dashboard ff-app relative h-[100dvh] overflow-hidden bg-canvas font-sans text-ink">
       <div aria-hidden="true" className="pointer-events-none fixed inset-0">
         <div className="absolute -top-40 -left-32 h-[520px] w-[520px] rounded-full bg-amber/[0.06] blur-3xl" />
         <div className="absolute top-1/4 -right-40 h-[420px] w-[420px] rounded-full bg-cyan/[0.04] blur-3xl" />
@@ -365,10 +365,10 @@ export default function AiPlanner() {
         <div className="ffd-grid-bg absolute inset-0" />
       </div>
 
-      <div className="relative mx-auto w-full max-w-[1320px] px-4 py-6 sm:px-6 lg:grid lg:grid-cols-[200px_minmax(0,1fr)] lg:items-start lg:gap-8 lg:px-8 lg:py-8">
+      <div className="relative mx-auto flex h-full w-full max-w-[1320px] flex-col px-4 py-4 sm:px-6 lg:grid lg:grid-cols-[200px_minmax(0,1fr)] lg:items-stretch lg:gap-8 lg:px-8 lg:py-6">
         <DashboardRailLite active={active} unread={unread} />
 
-        <main className="ff-main mt-5 min-w-0 lg:mt-0">
+        <main className="ff-main mt-3 flex min-h-0 min-w-0 flex-1 flex-col lg:mt-0">
           <ChatSection
             messages={chat}
             chatInput={chatInput}
@@ -385,7 +385,7 @@ export default function AiPlanner() {
             onSearchPriorities={handleSearchPriorities}
           />
 
-          <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-line/60 pt-4 font-mono text-[0.58rem] tracking-[0.1em] text-dim uppercase">
+          <div className="mt-4 flex shrink-0 flex-wrap items-center justify-between gap-3 border-t border-line/60 pt-3 font-mono text-[0.58rem] tracking-[0.1em] text-dim uppercase">
             <span>FocusFlow AI · Planner</span>
             <div className="flex flex-wrap items-center gap-3">
               <Link to="/dashboard" className="transition hover:text-ink">

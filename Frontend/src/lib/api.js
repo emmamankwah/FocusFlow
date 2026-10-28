@@ -1,7 +1,24 @@
 const BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/+$/, '')
 
-function getToken() {
+export function getToken() {
   return localStorage.getItem('token') || sessionStorage.getItem('token')
+}
+
+const unauthorizedListeners = new Set()
+
+export function onUnauthorized(listener) {
+  unauthorizedListeners.add(listener)
+  return () => unauthorizedListeners.delete(listener)
+}
+
+function notifyUnauthorized() {
+  for (const listener of unauthorizedListeners) {
+    try {
+      listener()
+    } catch {
+      // A failing listener must not break the request that reported the 401.
+    }
+  }
 }
 
 export function setToken(token, persist = true) {
@@ -78,7 +95,10 @@ export async function api(path, { method = 'GET', body, headers = {}, signal } =
       : null
 
   if (!res.ok || bodyError) {
-    if (res.status === 401 && getToken()) setToken(null)
+    if (res.status === 401 && getToken()) {
+      setToken(null)
+      notifyUnauthorized()
+    }
 
     const error = new Error(errorMessage(data, res.status))
     error.status = res.status

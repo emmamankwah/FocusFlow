@@ -56,7 +56,7 @@ export function Panel({ id, title, hint, action, children, className = '', ariaL
       )}
     >
       {showHeader && (
-        <div className="mb-4 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-2">
+        <div className="mb-4 flex shrink-0 flex-wrap items-baseline justify-between gap-x-3 gap-y-2">
           {title ? (
             <h2
               id={`${id}-title`}

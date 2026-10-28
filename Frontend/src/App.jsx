@@ -1,6 +1,9 @@
 import { lazy, Suspense } from 'react'
 import { Route, Routes } from 'react-router-dom'
 import ScrollToTop from './components/ScrollToTop.jsx'
+import PageLoader from './components/PageLoader.jsx'
+import ProtectedRoute from './components/ProtectedRoute.jsx'
+import GuestRoute from './components/GuestRoute.jsx'
 
 const Landing = lazy(() => import('./pages/Landing/Landing.jsx'))
 const Register = lazy(() => import('./pages/Auth/Register.jsx'))
@@ -12,28 +15,79 @@ const Dashboard = lazy(() => import('./pages/Dashboard/Dashboard.jsx'))
 const AiPlanner = lazy(() => import('./pages/Dashboard/AiPlanner.jsx'))
 const NotFound = lazy(() => import('./pages/NotFound.jsx'))
 
-function PageLoader() {
-  return (
-    <div className="grid min-h-screen place-items-center bg-canvas">
-      <span className="h-9 w-9 animate-spin rounded-full border-2 border-line border-t-amber" />
-    </div>
-  )
-}
-
 export default function App() {
   return (
     <Suspense fallback={<PageLoader />}>
       <ScrollToTop />
       <Routes>
         <Route path="/" element={<Landing />} />
-        <Route path="/signup" element={<Register />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/verify-otp" element={<VerifyOtp />} />
-        <Route path="/forgot-password" element={<ForgotPassword />} />
-        <Route path="/reset-password" element={<ResetPassword />} />
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/ai-planner" element={<AiPlanner />} />
-        <Route path="/planner" element={<AiPlanner />} />
+
+        <Route
+          path="/signup"
+          element={
+            <GuestRoute>
+              <Register />
+            </GuestRoute>
+          }
+        />
+        <Route
+          path="/login"
+          element={
+            <GuestRoute>
+              <Login />
+            </GuestRoute>
+          }
+        />
+        <Route
+          path="/verify-otp"
+          element={
+            <GuestRoute>
+              <VerifyOtp />
+            </GuestRoute>
+          }
+        />
+        <Route
+          path="/forgot-password"
+          element={
+            <GuestRoute>
+              <ForgotPassword />
+            </GuestRoute>
+          }
+        />
+        <Route
+          path="/reset-password"
+          element={
+            <GuestRoute>
+              <ResetPassword />
+            </GuestRoute>
+          }
+        />
+
+        <Route
+          path="/dashboard"
+          element={
+            <ProtectedRoute>
+              <Dashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/ai-planner"
+          element={
+            <ProtectedRoute>
+              <AiPlanner />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/planner"
+          element={
+            <ProtectedRoute>
+              <AiPlanner />
+            </ProtectedRoute>
+          }
+        />
+
         <Route path="*" element={<NotFound />} />
       </Routes>
     </Suspense>

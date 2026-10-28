@@ -31,7 +31,7 @@ export default function Login() {
       })
       const token = res?.token || res?.access_token
       if (token) setToken(token, data.remember)
-      navigate('/dashboard')
+      navigate(state?.from || '/dashboard', { replace: true })
     } catch (err) {
       setApiError(err.message || 'Login failed')
     }

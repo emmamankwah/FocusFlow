@@ -12,7 +12,7 @@ export const sections = [
   { id: 'sec-deadlines', label: 'Deadlines' },
   { id: 'sec-wellbeing', label: 'Wellbeing' },
   { id: 'sec-progress', label: 'Progress' },
-  { id: 'sec-chat', label: 'Planner chat' },
+  { id: 'sec-chat', label: 'Planner chat', to: '/ai-planner' },
   { id: 'sec-notes', label: 'Notifications' },
 ]
 

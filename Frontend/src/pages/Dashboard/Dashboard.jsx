@@ -64,7 +64,7 @@ const MODULE_LINKS = [
   { id: 'tasks', title: 'Tasks', to: '/tasks', desc: 'Manage, prioritize and track all work.', icon: ClipboardIcon },
   { id: 'planner', title: 'AI Planner', to: '/ai-planner', desc: 'Get optimized recommendations.', icon: SparkIcon },
   { id: 'reports', title: 'Reports', to: '/reports', desc: 'Productivity analytics and trends.', icon: ChartIcon },
-  { id: 'chat', title: 'AI Chat', to: '#sec-chat', desc: 'Ask for advice in context.', icon: SparkIcon },
+  { id: 'chat', title: 'AI Chat', to: '/ai-planner', desc: 'Open the full-screen planner chat.', icon: SparkIcon },
   { id: 'notifications', title: 'Notifications', to: '#sec-notes', desc: 'Smart alerts and updates.', icon: InboxIcon },
 ]
 
@@ -446,28 +446,45 @@ function DashboardRail({ active, onNav, unread }) {
           >
             {sections.map((section) => {
               const isActive = active === section.id
+              const className = cx(
+                'flex min-h-9 shrink-0 items-center justify-between gap-2 rounded-lg border-l-2 px-3 py-2 text-left font-mono text-[0.63rem] tracking-[0.13em] uppercase transition lg:w-full',
+                isActive
+                  ? 'border-amber bg-amber/10 text-amber'
+                  : 'border-transparent text-dim hover:bg-deck/60 hover:text-ink',
+              )
+              const unreadBadge = section.id === 'sec-notes' && unread > 0 && (
+                <span
+                  className="rounded-full bg-amber px-1.5 py-0.5 font-mono text-[0.56rem] font-semibold tracking-normal text-[#171205]"
+                  aria-label={`${unread} unread notifications`}
+                >
+                  {unread}
+                </span>
+              )
+
+              if (section.to) {
+                return (
+                  <Link
+                    key={section.id}
+                    to={section.to}
+                    onClick={() => setMenuOpen(false)}
+                    className={className}
+                  >
+                    <span>{section.label}</span>
+                    {unreadBadge}
+                  </Link>
+                )
+              }
+
               return (
                 <button
                   key={section.id}
                   type="button"
                   onClick={() => handleNav(section.id)}
                   aria-current={isActive ? 'true' : undefined}
-                  className={cx(
-                    'flex min-h-9 shrink-0 items-center justify-between gap-2 rounded-lg border-l-2 px-3 py-2 text-left font-mono text-[0.63rem] tracking-[0.13em] uppercase transition lg:w-full',
-                    isActive
-                      ? 'border-amber bg-amber/10 text-amber'
-                      : 'border-transparent text-dim hover:bg-deck/60 hover:text-ink',
-                  )}
+                  className={className}
                 >
                   <span>{section.label}</span>
-                  {section.id === 'sec-notes' && unread > 0 && (
-                    <span
-                      className="rounded-full bg-amber px-1.5 py-0.5 font-mono text-[0.56rem] font-semibold tracking-normal text-[#171205]"
-                      aria-label={`${unread} unread notifications`}
-                    >
-                      {unread}
-                    </span>
-                  )}
+                  {unreadBadge}
                 </button>
               )
             })}
@@ -603,18 +620,20 @@ export default function Dashboard() {
   }, [])
 
   useEffect(() => {
+    const tracked = sections.filter((section) => !section.to)
+
     const updateActive = () => {
       if (Date.now() < navLockRef.current) return
       if (
         window.innerHeight + window.scrollY >=
         document.documentElement.scrollHeight - 8
       ) {
-        setActive(sections[sections.length - 1].id)
+        setActive(tracked[tracked.length - 1].id)
         return
       }
       const probe = window.scrollY + 160
-      let current = sections[0].id
-      sections.forEach((section) => {
+      let current = tracked[0].id
+      tracked.forEach((section) => {
         const el = document.getElementById(section.id)
         if (!el) return
         if (el.getBoundingClientRect().top + window.scrollY <= probe) {
