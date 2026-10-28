@@ -17,13 +17,13 @@ from typing import Dict
 
 from dotenv import load_dotenv
 
-from model.user import (
+from authentication.model.user import (
     UserLogin,
     UserProfileUpdate,
     UserPublic,
     UserRegister,
 )
-from repository.authentication.user_repo import (
+from authentication.repository.authentication.user_repo import (
     clear_otp,
     delete_pending_user,
     get_pending_user,
@@ -39,19 +39,19 @@ from repository.authentication.user_repo import (
     update_user_password_by_id,
     update_user_profile,
 )
-from security.rate_limit import SlidingWindowLimiter
-from security.secure_users import (
+from authentication.security.rate_limit import SlidingWindowLimiter
+from authentication.security.secure_users import (
     hash_password,
     verify_password,
     secure_verify_otp,
 )
-from security.token import create_access_token
-from utilities.authentication_user.mail import (
+from authentication.security.token import create_access_token
+from authentication.utilities.authentication_user.mail import (
     create_verification_otp,
     send_verification_email,
 )
 
-load_dotenv(Path(__file__).resolve().parents[2] / ".env")
+load_dotenv(Path(__file__).resolve().parents[3] / ".env")
 
 OTP_EXPIRE_MINUTES = int(os.getenv("OTP_EXPIRE_MINUTES", "10"))
 OTP_MAX_ATTEMPTS = int(os.getenv("OTP_MAX_ATTEMPTS", "3"))

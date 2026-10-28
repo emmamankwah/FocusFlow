@@ -3,7 +3,7 @@
 from fastapi import Depends, HTTPException
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
-from security.token import decode_access_token
+from authentication.security.token import decode_access_token
 
 bearer_scheme = HTTPBearer(auto_error=False)
 

@@ -7,7 +7,7 @@ routes also require a Bearer token and return 401 when it is missing or invalid.
 
 from fastapi import APIRouter, Depends
 
-from model.user import (
+from authentication.model.user import (
     ChangePassword,
     OtpRequest,
     OtpResend,
@@ -17,8 +17,8 @@ from model.user import (
     UserProfileUpdate,
     UserRegister,
 )
-from security.current_user import get_current_user_id
-from service.auth_service.service_users import (
+from authentication.security.current_user import get_current_user_id
+from authentication.service.auth_service.service_users import (
     change_password as change_password_user,
     get_profile as get_profile_user,
     login_user,

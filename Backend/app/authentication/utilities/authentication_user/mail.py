@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta, timezone
 
-from settings.mail import configure_email
-from security.secure_users import create_secure_otp
+from authentication.settings.mail import configure_email
+from authentication.security.secure_users import create_secure_otp
 
 
 def create_verification_otp(expires_minutes: int) -> dict:

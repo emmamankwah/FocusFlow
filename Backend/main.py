@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from routes.auth.auth_user import router as auth_router
+from authentication.routes.auth.auth_user import router as auth_router
 
 load_dotenv(Path(__file__).resolve().parent / ".env")
 
@@ -36,6 +36,11 @@ app.include_router(auth_router)
 @app.get("/")
 def home():
     return {"message": "FocusFlow API is running"}
+
+
+@app.get("/health")
+def health():
+    return {"status": "ok"}
 
 
 if __name__ == "__main__":
