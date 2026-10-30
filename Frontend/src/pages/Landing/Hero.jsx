@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import WeekCard from './WeekCard.jsx'
 
 const pad = (n) => String(n).padStart(2, '0')
 
@@ -39,8 +38,8 @@ export default function Hero() {
   const countdown = useCountdown()
 
   return (
-    <section className="pt-[68px] pb-[84px]">
-      <div className="mx-auto grid max-w-[1180px] items-center gap-[60px] px-7 lg:grid-cols-2">
+    <section className="pt-[48px] pb-12">
+      <div className="mx-auto max-w-[820px] px-7">
         <div>
           <span className="inline-flex items-center gap-2 font-mono text-[0.72rem] tracking-[0.18em] text-amber uppercase">
             <span className="h-1.5 w-1.5 rounded-full bg-amber" />
@@ -78,8 +77,6 @@ export default function Hero() {
             ))}
           </dl>
         </div>
-
-        <WeekCard />
       </div>
     </section>
   )

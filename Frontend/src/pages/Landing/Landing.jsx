@@ -3,7 +3,6 @@ import Hero from './Hero.jsx'
 import Marquee from './Marquee.jsx'
 import Signals from './Signals.jsx'
 import Features from './Features.jsx'
-import AiShowcase from './AiShowcase.jsx'
 import Audience from './Audience.jsx'
 import Cta from './Cta.jsx'
 import Footer from './Footer.jsx'
@@ -20,7 +19,6 @@ export default function Landing() {
         <Marquee />
         <Signals />
         <Features />
-        <AiShowcase />
         <Audience />
       </main>
       <Cta />

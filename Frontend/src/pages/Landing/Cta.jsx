@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom'
 
 export default function Cta() {
   return (
-    <section id="start" className="relative overflow-hidden border-t border-line py-[96px]">
+    <section id="start" className="relative overflow-hidden border-t border-line py-16">
       <div aria-hidden className="pointer-events-none absolute inset-0">
         <div className="absolute top-1/2 left-1/2 h-[420px] w-[720px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-amber/10 blur-3xl" />
         <div className="absolute top-1/2 left-1/2 h-[300px] w-[520px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-coral/10 blur-3xl" />

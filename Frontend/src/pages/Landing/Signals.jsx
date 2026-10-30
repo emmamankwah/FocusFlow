@@ -25,7 +25,7 @@ const signals = [
 
 export default function Signals() {
   return (
-    <section id="signals" className="border-t border-line py-[84px]">
+    <section id="signals" className="border-t border-line py-12">
       <div className="mx-auto max-w-[1180px] px-7">
         <div className="mb-9">
           <SectionHeading

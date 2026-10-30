@@ -5,7 +5,6 @@ import { AnimatePresence, motion } from 'framer-motion'
 const links = [
   { label: 'How it works', href: '#signals' },
   { label: 'Features', href: '#features' },
-  { label: 'AI Assistant', href: '#ai' },
   { label: "Who it's for", href: '#audience' },
 ]
 
