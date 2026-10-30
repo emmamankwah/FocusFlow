@@ -8,8 +8,10 @@ The same routes are exposed two ways:
   ``uvicorn app.ai.chatbot.app:app``.
 """
 
-from fastapi import APIRouter, FastAPI
+from fastapi import APIRouter, Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+
+from app.authentication.security.current_user import get_current_user_id
 
 from . import chat_service, models
 
@@ -22,7 +24,10 @@ def health() -> dict:
 
 
 @router.post("/chat")
-def chat(request: models.ChatRequest) -> models.ChatResponse:
+def chat(
+    request: models.ChatRequest,
+    _user_id: int = Depends(get_current_user_id),
+) -> models.ChatResponse:
     reply = chat_service.get_reply(
         messages=request.messages,
         context=request.context,

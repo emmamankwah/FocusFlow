@@ -3,9 +3,7 @@ export const FOCUS_GOAL_HOURS = 4
 export const WEEKLY_GOAL_HOURS = 25
 
 export const sections = [
-  { id: 'sec-motivation', label: 'Motivation' },
   { id: 'sec-overview', label: 'Overview' },
-  { id: 'sec-modules', label: 'Modules' },
   { id: 'sec-work', label: 'Work Inbox' },
   { id: 'sec-focus', label: 'Today' },
   { id: 'sec-ai', label: 'Suggestions' },

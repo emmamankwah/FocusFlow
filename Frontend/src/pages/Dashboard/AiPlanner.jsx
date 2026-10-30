@@ -33,30 +33,19 @@ const INITIAL_CHAT = [
   },
 ]
 
-function DashboardRailLite({ active, unread }) {
-  const [open, setOpen] = useState(false)
-  const triggerRef = useRef(null)
-  const closeRef = useRef(null)
-
-  const close = useCallback(() => {
-    setOpen(false)
-    triggerRef.current?.focus()
-  }, [])
-
+function AiPlannerNav({ open, onClose, active, unread }) {
   useEffect(() => {
     if (!open) return undefined
 
     const onKeyDown = (event) => {
-      if (event.key === 'Escape') close()
+      if (event.key === 'Escape') onClose()
     }
     document.addEventListener('keydown', onKeyDown)
-    const focusTimer = window.setTimeout(() => closeRef.current?.focus(), 0)
 
     return () => {
       document.removeEventListener('keydown', onKeyDown)
-      window.clearTimeout(focusTimer)
     }
-  }, [open, close])
+  }, [open, onClose])
 
   const nav = [
     { id: 'ai-top', label: 'AI Planner', to: '/ai-planner' },
@@ -67,107 +56,82 @@ function DashboardRailLite({ active, unread }) {
     { id: 'chat', label: 'Chat', to: '/ai-planner' },
   ]
 
+  if (!open) return null
+
   return (
     <>
       <button
-        ref={triggerRef}
         type="button"
-        onClick={() => setOpen(true)}
-        aria-expanded={open}
-        aria-controls="ff-ai-drawer"
-        aria-label="Open navigation menu"
-        className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-[3px] border border-line bg-surface text-ink transition duration-150 hover:border-dim focus-visible:ring-2 focus-visible:ring-amber/35 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas focus-visible:outline-none"
+        aria-label="Close navigation menu"
+        onClick={onClose}
+        className="fixed inset-0 z-30 h-full w-full cursor-default bg-black/60 backdrop-blur-sm lg:hidden"
+      />
+
+      <aside
+        id="ff-ai-nav"
+        aria-label="AI planner navigation"
+        className="fixed top-14 bottom-0 left-0 z-40 flex w-[min(300px,86vw)] flex-col border-r border-line/80 bg-canvas p-5 shadow-[0_24px_70px_-20px_rgba(0,0,0,0.95)] lg:static lg:z-auto lg:w-[200px] lg:shrink-0 lg:border-r-0 lg:bg-transparent lg:p-0 lg:shadow-none"
       >
-        <MenuIcon className="h-4 w-4" />
-      </button>
-
-      {open && (
-        <div className="fixed inset-0 z-50">
-          <button
-            type="button"
-            aria-label="Close navigation menu"
-            onClick={close}
-            className="absolute inset-0 h-full w-full cursor-default bg-black/60 backdrop-blur-sm"
-          />
-
-          <aside
-            id="ff-ai-drawer"
-            role="dialog"
-            aria-modal="true"
-            aria-label="AI planner navigation"
-            className="absolute inset-y-0 left-0 flex w-[min(300px,86vw)] flex-col border-r border-line/80 bg-canvas p-5 shadow-[0_24px_70px_-20px_rgba(0,0,0,0.95)]"
+        <div className="flex items-center gap-3">
+          <Link
+            to="/"
+            onClick={onClose}
+            className="inline-flex min-w-0 items-center gap-2.5"
+            aria-label="FocusFlow home"
           >
-            <div className="flex items-center justify-between gap-3">
-              <Link
-                to="/"
-                onClick={close}
-                className="inline-flex min-w-0 items-center gap-2.5"
-                aria-label="FocusFlow home"
-              >
-                <BrandMark />
-                <span className="font-grotesk text-[1.05rem] font-bold tracking-[-0.02em] text-ink">
-                  Focus<span className="text-amber">Flow</span>
-                </span>
-              </Link>
-              <button
-                ref={closeRef}
-                type="button"
-                onClick={close}
-                aria-label="Close navigation menu"
-                className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-[3px] border border-line bg-surface text-ink transition duration-150 hover:border-dim focus-visible:ring-2 focus-visible:ring-amber/35 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas focus-visible:outline-none"
-              >
-                <MenuIcon open className="h-4 w-4" />
-              </button>
-            </div>
-
-            <nav aria-label="AI planner navigation" className="mt-6 grid gap-1">
-              {nav.map((item) => {
-                const isActive = active === item.id
-                return (
-                  <Link
-                    key={item.id}
-                    to={item.to}
-                    onClick={close}
-                    aria-current={isActive ? 'true' : undefined}
-                    className={cx(
-                      'flex min-h-9 items-center justify-between gap-2 rounded-lg border-l-2 px-3 py-2 text-left font-mono text-[0.63rem] tracking-[0.13em] uppercase transition',
-                      isActive
-                        ? 'border-amber bg-amber/10 text-amber'
-                        : 'border-transparent text-dim hover:bg-deck/60 hover:text-ink',
-                    )}
-                  >
-                    <span>{item.label}</span>
-                    {item.id === 'chat' && unread > 0 && (
-                      <span
-                        className="rounded-full bg-amber px-1.5 py-0.5 font-mono text-[0.56rem] font-semibold tracking-normal text-[#171205]"
-                        aria-label={`${unread} unread notifications`}
-                      >
-                        {unread}
-                      </span>
-                    )}
-                  </Link>
-                )
-              })}
-            </nav>
-
-            <div className="mt-auto border-t border-line/60 pt-4">
-              <Link
-                to="/dashboard"
-                onClick={close}
-                className="flex items-center gap-2.5 rounded-xl border border-line/80 bg-surface/70 p-2.5"
-              >
-                <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full border border-amber/30 bg-amber/10 font-grotesk text-[0.7rem] font-bold text-amber">
-                  AM
-                </span>
-                <span className="min-w-0">
-                  <span className="block truncate text-[0.78rem] font-semibold text-ink">Ama Mensah</span>
-                  <span className="block font-mono text-[0.54rem] tracking-[0.14em] text-dim uppercase">Back to dashboard</span>
-                </span>
-              </Link>
-            </div>
-          </aside>
+            <BrandMark />
+            <span className="font-grotesk text-[1.05rem] font-bold tracking-[-0.02em] text-ink">
+              Focus<span className="text-amber">Flow</span>
+            </span>
+          </Link>
         </div>
-      )}
+
+        <nav aria-label="AI planner navigation" className="mt-6 grid gap-1">
+          {nav.map((item) => {
+            const isActive = active === item.id
+            return (
+              <Link
+                key={item.id}
+                to={item.to}
+                onClick={onClose}
+                aria-current={isActive ? 'true' : undefined}
+                className={cx(
+                  'flex min-h-9 items-center justify-between gap-2 rounded-lg border-l-2 px-3 py-2 text-left font-mono text-[0.63rem] tracking-[0.13em] uppercase transition',
+                  isActive
+                    ? 'border-amber bg-amber/10 text-amber'
+                    : 'border-transparent text-dim hover:bg-deck/60 hover:text-ink',
+                )}
+              >
+                <span>{item.label}</span>
+                {item.id === 'chat' && unread > 0 && (
+                  <span
+                    className="rounded-full bg-amber px-1.5 py-0.5 font-mono text-[0.56rem] font-semibold tracking-normal text-[#171205]"
+                    aria-label={`${unread} unread notifications`}
+                  >
+                    {unread}
+                  </span>
+                )}
+              </Link>
+            )
+          })}
+        </nav>
+
+        <div className="mt-auto border-t border-line/60 pt-4">
+          <Link
+            to="/dashboard"
+            onClick={onClose}
+            className="flex items-center gap-2.5 rounded-xl border border-line/80 bg-surface/70 p-2.5"
+          >
+            <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full border border-amber/30 bg-amber/10 font-grotesk text-[0.7rem] font-bold text-amber">
+              AM
+            </span>
+            <span className="min-w-0">
+              <span className="block truncate text-[0.78rem] font-semibold text-ink">Ama Mensah</span>
+              <span className="block font-mono text-[0.54rem] tracking-[0.14em] text-dim uppercase">Back to dashboard</span>
+            </span>
+          </Link>
+        </div>
+      </aside>
     </>
   )
 }
@@ -178,8 +142,12 @@ export default function AiPlanner() {
   const today = useMemo(() => new Date(), [])
   const [board, setBoard] = useState(() => loadBoard(today))
   const [active, setActive] = useState('ai-top')
+  const [navOpen, setNavOpen] = useState(false)
   const [toast, setToast] = useState('')
   const toastTimer = useRef(null)
+
+  const openNav = useCallback(() => setNavOpen(true), [])
+  const closeNav = useCallback(() => setNavOpen(false), [])
 
   const [chat, setChat] = useState(INITIAL_CHAT)
   const [chatInput, setChatInput] = useState('')
@@ -353,27 +321,45 @@ export default function AiPlanner() {
       </div>
 
       <div className="relative mx-auto flex h-full w-full max-w-[1320px] flex-col px-4 py-4 sm:px-6 lg:px-8 lg:py-6">
-        <main className="ff-main flex min-h-0 min-w-0 flex-1 flex-col">
-          <div className="flex h-10 shrink-0 items-center">
-            <DashboardRailLite active={active} unread={unread} />
-          </div>
+        <div className="relative z-50 flex h-10 shrink-0 items-center">
+          <button
+            type="button"
+            onClick={navOpen ? closeNav : openNav}
+            aria-expanded={navOpen}
+            aria-controls="ff-ai-nav"
+            aria-label={navOpen ? 'Close navigation menu' : 'Open navigation menu'}
+            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-[3px] border border-line bg-surface text-ink transition duration-150 hover:border-dim focus-visible:ring-2 focus-visible:ring-amber/35 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas focus-visible:outline-none"
+          >
+            <MenuIcon open={navOpen} className="h-4 w-4" />
+          </button>
+        </div>
 
-          <ChatSection
-            messages={chat}
-            chatInput={chatInput}
-            onChatInput={setChatInput}
-            onSend={handleSend}
-            onAsk={ask}
-            logRef={chatLogRef}
-            pending={chatPending}
-            variant="full"
-            onAttach={handleAttach}
-            onVoice={handleVoice}
-            onDeepSearch={handleDeepSearch}
-            onWebSearch={handleWebSearch}
-            onSearchPriorities={handleSearchPriorities}
+        <div className="flex min-h-0 w-full flex-1 gap-4 lg:gap-6">
+          <AiPlannerNav
+            open={navOpen}
+            onClose={closeNav}
+            active={active}
+            unread={unread}
           />
-        </main>
+
+          <main className="ff-main flex min-h-0 min-w-0 flex-1 flex-col">
+            <ChatSection
+              messages={chat}
+              chatInput={chatInput}
+              onChatInput={setChatInput}
+              onSend={handleSend}
+              onAsk={ask}
+              logRef={chatLogRef}
+              pending={chatPending}
+              variant="full"
+              onAttach={handleAttach}
+              onVoice={handleVoice}
+              onDeepSearch={handleDeepSearch}
+              onWebSearch={handleWebSearch}
+              onSearchPriorities={handleSearchPriorities}
+            />
+          </main>
+        </div>
       </div>
 
       <div

@@ -204,7 +204,6 @@ Reports include:
 ### Achievement System
 
 Gamify productivity:
-- 7-Day Streak
 - Assignment Master
 - Early Bird
 - Consistency Champion

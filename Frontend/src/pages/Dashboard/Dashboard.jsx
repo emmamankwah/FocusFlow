@@ -22,16 +22,11 @@ import {
   BTN,
   BTN_PRIMARY,
   BTN_QUIET,
-  CalendarIcon,
-  ChartIcon,
   CheckIcon,
-  ClipboardIcon,
-  InboxIcon,
   MenuIcon,
   Panel,
   SectionLabel,
   SparkIcon,
-  StatCard,
   cx,
 } from './ui.jsx'
 import { FocusSection, PlanSection } from './FocusPlan.jsx'
@@ -50,125 +45,113 @@ const INITIAL_CHAT = [
   },
 ]
 
-const MOTIVATION_QUOTES = [
-  'Small steps today lead to big results tomorrow.',
-  'Focus on one task. Finish it. Repeat.',
-  'Discipline beats motivation when motivation runs low.',
-  'Protect your focus — it’s your most valuable resource.',
-  'Progress over perfection. Ship one block at a time.',
-  'Rest is part of the plan, not a reward.',
-]
-
-const MODULE_LINKS = [
-  { id: 'calendar', title: 'Calendar', to: '/calendar', desc: 'Monthly, weekly and daily agenda.', icon: CalendarIcon },
-  { id: 'tasks', title: 'Tasks', to: '/tasks', desc: 'Manage, prioritize and track all work.', icon: ClipboardIcon },
-  { id: 'planner', title: 'AI Planner', to: '/ai-planner', desc: 'Get optimized recommendations.', icon: SparkIcon },
-  { id: 'reports', title: 'Reports', to: '/reports', desc: 'Productivity analytics and trends.', icon: ChartIcon },
-  { id: 'chat', title: 'AI Chat', to: '/ai-planner', desc: 'Open the full-screen planner chat.', icon: SparkIcon },
-  { id: 'notifications', title: 'Notifications', to: '#sec-notes', desc: 'Smart alerts and updates.', icon: InboxIcon },
-]
-
 function prefersReducedMotion() {
   return window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
 }
 
-function MotivationSection({ date }) {
-  const quote = useMemo(() => {
-    const idx = date.getDate() % MOTIVATION_QUOTES.length
-    return MOTIVATION_QUOTES[idx]
-  }, [date])
-
+function StatCell({ label, value, unit, note, meter, valueClass = '' }) {
   return (
-    <section id="sec-motivation" className="ffd-section">
-      <div className="relative overflow-hidden rounded-2xl border border-amber/25 bg-[radial-gradient(circle_at_top,rgba(242,184,75,0.16),transparent_60%),linear-gradient(180deg,rgba(242,184,75,0.1),transparent)] p-4 shadow-[0_24px_70px_-40px_rgba(242,184,75,0.4)] sm:p-5">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <SectionLabel className="text-amber/90">Daily motivation</SectionLabel>
-            <p className="mt-2 font-grotesk text-[1.08rem] leading-snug font-semibold tracking-[-0.01em] text-ink sm:text-[1.16rem]">
-              “{quote}”
-            </p>
-          </div>
-          <span className="grid h-9 w-9 place-items-center rounded-full border border-amber/30 bg-amber/10 text-amber">
-            <SparkIcon className="h-4 w-4" />
-          </span>
-        </div>
-      </div>
-    </section>
-  )
-}
-
-function ProductivityScoreCard({ focusPct, score, doneCount, allTasks }) {
-  const computed = Math.round(focusPct * 0.6 + (100 - score) * 0.4)
-  const value = Math.max(0, Math.min(100, computed))
-  const status = value >= 80 ? 'On track' : value >= 65 ? 'Steady' : value >= 50 ? 'Needs focus' : 'Needs rest'
-  const note = `${doneCount} of ${allTasks.length} done · Burnout ${score}`
-
-  return (
-    <div className="ff-stat rounded-2xl border border-line/80 bg-surface/80 p-4 shadow-[0_24px_70px_-50px_rgba(0,0,0,0.95)]">
-      <SectionLabel>Productivity score</SectionLabel>
-      <div className="mt-1.5 flex items-end gap-2">
-        <span className="font-grotesk text-[1.9rem] leading-none font-bold tracking-[-0.03em] text-ink">
+    <div className="bg-surface/80 px-4 py-4 sm:px-5">
+      <SectionLabel>{label}</SectionLabel>
+      <div className="mt-2 flex items-end gap-1">
+        <span
+          className={cx(
+            'font-grotesk font-bold tracking-[-0.03em] text-ink',
+            valueClass || 'text-[1.55rem] leading-none',
+          )}
+        >
           {value}
         </span>
-        <span className="mb-1 font-mono text-[0.7rem] tracking-[0.16em] text-dim uppercase">/ 100</span>
+        {unit && (
+          <span className="mb-0.5 font-sans text-[0.72rem] font-semibold text-dim">
+            {unit}
+          </span>
+        )}
       </div>
-      <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-deck">
-        <div className="h-full rounded-full bg-amber transition-[width] duration-500" style={{ width: `${value}%` }} />
-      </div>
-      <div className="mt-1.5 flex items-center justify-between text-[0.72rem] text-dim">
-        <span>{status}</span>
-        <span>{note}</span>
-      </div>
+      {meter !== undefined && (
+        <div className="mt-2.5 h-1 overflow-hidden rounded-full bg-deck">
+          <div
+            className="h-full rounded-full bg-amber transition-[width] duration-500"
+            style={{ width: `${Math.max(0, Math.min(100, meter))}%` }}
+          />
+        </div>
+      )}
+      <p className="mt-2 text-[0.72rem] leading-snug text-dim">{note}</p>
     </div>
   )
 }
 
-function ModulesGrid() {
+function StatStrip({ focusHours, focusPct, doneCount, totalCount, planPct, productivity, score, risk }) {
+  const status =
+    productivity >= 80
+      ? 'On track'
+      : productivity >= 65
+        ? 'Steady'
+        : productivity >= 50
+          ? 'Needs focus'
+          : 'Needs rest'
+  const remaining = totalCount - doneCount
+
   return (
-    <Panel id="sec-modules" title="Modules" hint="Quick access">
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-        {MODULE_LINKS.map((module) => {
-          const Icon = module.icon
-          const isAnchor = module.to.startsWith('#')
-          const content = (
-            <>
-              <span className="grid h-9 w-9 place-items-center rounded-[10px] border border-amber/25 bg-amber/10 text-amber">
-                <Icon className="h-4 w-4" />
-              </span>
-              <div className="min-w-0">
-                <div className="text-[0.9rem] font-semibold text-ink">{module.title}</div>
-                <div className="mt-0.5 text-[0.75rem] leading-snug text-dim">{module.desc}</div>
-              </div>
-              <span className="ml-auto font-mono text-[0.56rem] tracking-[0.14em] text-dim uppercase">View</span>
-            </>
-          )
-
-          const className =
-            'group flex items-center gap-3 rounded-xl border border-line/70 bg-surface/60 px-3 py-2.5 transition hover:border-amber/40 hover:bg-deck/50'
-
-          if (isAnchor) {
-            return (
-              <a key={module.id} href={module.to} className={className}>
-                {content}
-              </a>
-            )
-          }
-
-          return (
-            <Link key={module.id} to={module.to} className={className}>
-              {content}
-            </Link>
-          )
-        })}
-      </div>
-    </Panel>
+    <section
+      id="sec-overview"
+      aria-label="Today at a glance"
+      className="ffd-section ff-stats grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-line/80 bg-line/50 xl:grid-cols-4"
+    >
+      <StatCell
+        label="Focus today"
+        value={focusHours.toFixed(1)}
+        unit="h"
+        meter={focusPct}
+        note={`${Math.round(focusPct)}% of the ${FOCUS_GOAL_HOURS} h goal`}
+      />
+      <StatCell
+        label="Today’s plan"
+        value={doneCount}
+        unit={`of ${totalCount} done`}
+        meter={planPct}
+        note={remaining === 0 ? 'All blocks done' : `${remaining} block${remaining === 1 ? '' : 's'} left`}
+      />
+      <StatCell
+        label="Productivity"
+        value={productivity}
+        unit="/ 100"
+        meter={productivity}
+        note={`${status} · Burnout ${score}`}
+      />
+      <StatCell
+        label="Next deadline"
+        value={risk.n}
+        valueClass="text-[0.95rem] leading-tight"
+        note={
+          <span className="inline-flex flex-wrap items-center gap-x-2 gap-y-1">
+            <span
+              className={cx(
+                'inline-flex rounded-[3px] border px-1.5 py-0.5 font-mono text-[0.54rem] tracking-[0.08em] uppercase',
+                riskStyles[risk.level].pill,
+              )}
+            >
+              {risk.label}
+            </span>
+            <span className="font-mono text-[0.62rem]">
+              {risk.due} · {risk.p}%
+            </span>
+          </span>
+        }
+      />
+    </section>
   )
 }
 
 function WorkInboxSection({ queue, tasks, onPost, onSchedule, onRemove }) {
   const [form, setForm] = useState({ title: '', course: '', due: '', est: '90', notes: '', type: 'focus' })
   const [error, setError] = useState('')
+  const [open, setOpen] = useState(false)
   const ref = useRef(null)
+
+  useEffect(() => {
+    if (open) ref.current?.focus()
+  }, [open])
 
   function change(k, v) {
     setForm((p) => ({ ...p, [k]: v }))
@@ -201,8 +184,30 @@ function WorkInboxSection({ queue, tasks, onPost, onSchedule, onRemove }) {
   }
 
   return (
-    <Panel id="sec-work" title="Work Inbox" hint="Post work to schedule">
-      <form onSubmit={submit} className="ffd-addform rounded-xl border border-line/70 bg-deck/40 p-4">
+    <Panel
+      id="sec-work"
+      title="Work Inbox"
+      hint={incoming.length > 0 ? `${incoming.length} waiting` : 'Nothing waiting'}
+      action={
+        <button
+          type="button"
+          onClick={() => setOpen((value) => !value)}
+          aria-expanded={open}
+          aria-controls="ffd-work-form"
+          className={cx(BTN, 'ff-btn')}
+        >
+          {open ? 'Close' : 'Post work'}
+        </button>
+      }
+    >
+      <form
+        id="ffd-work-form"
+        onSubmit={submit}
+        className={cx(
+          'ffd-addform rounded-xl border border-line/70 bg-deck/40 p-4',
+          open ? 'block' : 'hidden',
+        )}
+      >
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="grid gap-1.5 text-[0.78rem] text-ink sm:col-span-2">
             <span className="font-medium">Work title</span>
@@ -276,7 +281,7 @@ function WorkInboxSection({ queue, tasks, onPost, onSchedule, onRemove }) {
         )}
         <div className="mt-3 flex flex-wrap items-center gap-2">
           <button type="submit" className={cx(BTN_PRIMARY, 'ff-btn')}>
-            Post work
+            Add to inbox
           </button>
           <span className="font-mono text-[0.56rem] tracking-[0.12em] text-dim uppercase">
             System will suggest a slot
@@ -503,31 +508,6 @@ function DashboardRail({ active, onNav, unread }) {
   )
 }
 
-function DeadlineStat({ risk }) {
-  const tone = riskStyles[risk.level]
-  return (
-    <div className="ff-stat rounded-2xl border border-line/80 bg-surface/80 p-4 shadow-[0_24px_70px_-50px_rgba(0,0,0,0.95)]">
-      <SectionLabel>Next deadline</SectionLabel>
-      <div className="mt-1.5 font-grotesk text-[1.02rem] leading-tight font-bold tracking-[-0.01em] text-ink">
-        {risk.n}
-      </div>
-      <div className="mt-2 flex flex-wrap items-center gap-2">
-        <span
-          className={cx(
-            'inline-flex rounded-[3px] border px-1.5 py-0.5 font-mono text-[0.54rem] tracking-[0.08em] uppercase',
-            tone.pill,
-          )}
-        >
-          {risk.label}
-        </span>
-        <span className="font-mono text-[0.62rem] text-dim">
-          {risk.due} · {risk.p}%
-        </span>
-      </div>
-    </div>
-  )
-}
-
 export default function Dashboard() {
   usePageTitle('Dashboard — FocusFlow')
 
@@ -569,7 +549,6 @@ export default function Dashboard() {
   const heroTask =
     allTasks.find((task) => task.type === 'focus' && !board.done[task.id]) ?? null
   const doneCount = allTasks.filter((task) => board.done[task.id]).length
-  const undoneCount = allTasks.length - doneCount
   const focusMinutes =
     board.extraMin +
     allTasks
@@ -579,6 +558,10 @@ export default function Dashboard() {
   const focusPct = Math.min(100, (focusMinutes / (FOCUS_GOAL_HOURS * 60)) * 100)
   const planPct = allTasks.length ? (doneCount / allTasks.length) * 100 : 0
   const score = board.sugs.s2 === 'done' ? 33 : 41
+  const productivity = Math.max(
+    0,
+    Math.min(100, Math.round(focusPct * 0.6 + (100 - score) * 0.4)),
+  )
   const unread = notes.filter((note) => !board.read[note.id]).length
   const chartTotal = chart.reduce((sum, day) => sum + day.hours, 0)
   const chartAverage = chartTotal / chart.length
@@ -916,17 +899,17 @@ export default function Dashboard() {
         <DashboardRail active={active} onNav={handleNav} unread={unread} />
 
         <main className="ff-main mt-5 min-w-0 lg:mt-0">
-          <div className="ff-top flex flex-wrap items-start justify-between gap-4">
+          <div className="ff-top flex flex-wrap items-end justify-between gap-x-6 gap-y-4">
             <div className="min-w-0">
               <SectionLabel className="text-amber/85">{fmtLongDate(today)}</SectionLabel>
-              <h1 className="mt-2 font-grotesk text-[1.65rem] leading-tight font-bold tracking-[-0.03em] text-ink sm:text-[1.9rem]">
+              <h1 className="mt-2.5 font-grotesk text-[2rem] leading-[1.05] font-bold tracking-[-0.035em] text-ink sm:text-[2.6rem]">
                 {greeting(today)}
               </h1>
-              <p className="mt-1 max-w-xl text-[0.82rem] leading-relaxed text-dim">
+              <p className="mt-3 max-w-xl text-[0.9rem] leading-relaxed text-dim">
                 {nextCopy}
               </p>
             </div>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap items-center gap-2 pb-1">
               <button type="button" onClick={replan} className={cx(BTN, 'ff-btn')}>
                 <SparkIcon className="h-3.5 w-3.5" />
                 Re-plan my week
@@ -943,38 +926,17 @@ export default function Dashboard() {
             </div>
           </div>
 
-          <div className="mt-5">
-            <MotivationSection date={today} />
-          </div>
-
-          <div id="sec-overview" className="ffd-section ff-stats mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            <StatCard
-              label="Focus today"
-              meter={focusPct}
-              note={`${Math.round(focusPct)}% of the ${FOCUS_GOAL_HOURS} h daily goal`}
-            >
-              {focusHours.toFixed(1)}
-              <small className="ml-1 font-sans text-[0.72rem] font-semibold text-dim">h</small>
-            </StatCard>
-
-            <StatCard
-              label="Today’s plan"
-              meter={planPct}
-              note={undoneCount === 0 ? 'All blocks done' : `${undoneCount} blocks left`}
-            >
-              {doneCount}
-              <small className="ml-1 font-sans text-[0.72rem] font-semibold text-dim">
-                of {allTasks.length} done
-              </small>
-            </StatCard>
-
-            <ProductivityScoreCard focusPct={focusPct} score={score} doneCount={doneCount} allTasks={allTasks} />
-
-            <DeadlineStat risk={risks[0]} />
-          </div>
-
-          <div className="mt-5">
-            <ModulesGrid />
+          <div className="mt-6">
+            <StatStrip
+              focusHours={focusHours}
+              focusPct={focusPct}
+              doneCount={doneCount}
+              totalCount={allTasks.length}
+              planPct={planPct}
+              productivity={productivity}
+              score={score}
+              risk={risks[0]}
+            />
           </div>
 
           <div className="mt-5">
