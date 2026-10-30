@@ -38,7 +38,7 @@ export default function Hero() {
   const countdown = useCountdown()
 
   return (
-    <section className="pt-[48px] pb-12">
+    <section className="pt-6 pb-12">
       <div className="mx-auto max-w-[820px] px-7">
         <div>
           <span className="inline-flex items-center gap-2 font-mono text-[0.72rem] tracking-[0.18em] text-amber uppercase">

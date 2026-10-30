@@ -213,7 +213,7 @@ function OverloadTile() {
 
 export default function Features() {
   return (
-    <section id="features" className="border-t border-line py-12">
+    <section id="features" className="border-t border-line pt-8 pb-12">
       <div className="mx-auto max-w-[1180px] px-7">
         <div className="mb-9">
           <SectionHeading
