@@ -1,12 +1,10 @@
-import { apiGet, getToken } from '@/lib/api'
+import { getToken } from '@/lib/api'
+import { getSessionUser } from '@/lib/mockAuth'
 
-// Fail closed: a missing token, a 401, an HTTP error, or an unreachable
-// backend all count as "not signed in". Nothing is cached, so every guarded
-// route mount checks the API again.
+// Frontend-only session check. A token without a stored account (or a stale
+// token from the old backend sessions) counts as signed out, so guarded routes
+// fail closed instead of rendering against missing data.
 export function validateSession() {
   if (!getToken()) return Promise.resolve(false)
-
-  return apiGet('/auth/profile')
-    .then(() => true)
-    .catch(() => false)
+  return Promise.resolve(Boolean(getSessionUser()))
 }

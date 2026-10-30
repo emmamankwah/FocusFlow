@@ -28,7 +28,7 @@ export function SuggestionsSection({ suggestions, sugs, onSuggestion }) {
                   className="rounded-xl border border-amber/20 bg-amber/[0.06] p-3.5"
                 >
                   <div className="flex items-start gap-2.5">
-                    <span className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full bg-amber text-[#171205]">
+                    <span className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full bg-amber text-white">
                       <CheckIcon className="h-3 w-3" />
                     </span>
                     <div className="min-w-0">
@@ -104,7 +104,7 @@ export function DeadlinesSection({ risks }) {
                 </p>
                 <span
                   className={cx(
-                    'inline-flex shrink-0 rounded-[3px] border px-1.5 py-0.5 font-mono text-[0.56rem] tracking-[0.08em] uppercase',
+                    'inline-flex shrink-0 rounded-lg border px-1.5 py-0.5 font-mono text-[0.56rem] tracking-[0.08em] uppercase',
                     tone.pill,
                   )}
                 >

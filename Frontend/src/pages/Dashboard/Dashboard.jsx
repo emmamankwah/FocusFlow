@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import usePageTitle from '@/lib/usePageTitle'
 import { buildPlannerContext, sendPlannerMessage } from '@/lib/ai'
+import { getSessionUser, logout } from '@/lib/mockAuth'
 import './dashboard.css'
 import {
   FOCUS_GOAL_HOURS,
@@ -16,6 +17,9 @@ import {
   riskStyles,
   saveBoard,
   sections,
+  userFirstName,
+  userFullName,
+  userInitials,
 } from './data.js'
 import {
   BrandMark,
@@ -38,10 +42,10 @@ import {
 } from './Insights.jsx'
 import { ChatSection, NotificationsSection } from './ChatNotes.jsx'
 
-const INITIAL_CHAT = [
+const initialChat = (name) => [
   {
     role: 'ai',
-    text: 'Hi Ama. Ask me what to focus on next, why a deadline is risky, or whether your workload is too heavy.',
+    text: `Hi ${name}. Ask me what to focus on next, why a deadline is risky, or whether your workload is too heavy.`,
   },
 ]
 
@@ -127,7 +131,7 @@ function StatStrip({ focusHours, focusPct, doneCount, totalCount, planPct, produ
           <span className="inline-flex flex-wrap items-center gap-x-2 gap-y-1">
             <span
               className={cx(
-                'inline-flex rounded-[3px] border px-1.5 py-0.5 font-mono text-[0.54rem] tracking-[0.08em] uppercase',
+                'inline-flex rounded-lg border px-1.5 py-0.5 font-mono text-[0.54rem] tracking-[0.08em] uppercase',
                 riskStyles[risk.level].pill,
               )}
             >
@@ -216,7 +220,7 @@ function WorkInboxSection({ queue, tasks, onPost, onSchedule, onRemove }) {
               value={form.title}
               onChange={(e) => change('title', e.target.value)}
               placeholder="e.g. CHEM 230 lab report"
-              className="h-9 rounded-[3px] border border-line bg-surface px-3 text-[0.82rem] text-ink outline-none transition focus:border-amber/60 focus:ring-2 focus:ring-amber/20"
+              className="h-9 rounded-lg border border-line bg-surface px-3 text-[0.82rem] text-ink outline-none transition focus:border-amber/60 focus:ring-2 focus:ring-amber/20"
             />
           </label>
           <label className="grid gap-1.5 text-[0.78rem] text-ink">
@@ -225,7 +229,7 @@ function WorkInboxSection({ queue, tasks, onPost, onSchedule, onRemove }) {
               value={form.course}
               onChange={(e) => change('course', e.target.value)}
               placeholder="e.g. CHEM 230"
-              className="h-9 rounded-[3px] border border-line bg-surface px-3 text-[0.82rem] text-ink outline-none transition focus:border-amber/60 focus:ring-2 focus:ring-amber/20"
+              className="h-9 rounded-lg border border-line bg-surface px-3 text-[0.82rem] text-ink outline-none transition focus:border-amber/60 focus:ring-2 focus:ring-amber/20"
             />
           </label>
           <label className="grid gap-1.5 text-[0.78rem] text-ink">
@@ -234,7 +238,7 @@ function WorkInboxSection({ queue, tasks, onPost, onSchedule, onRemove }) {
               type="date"
               value={form.due}
               onChange={(e) => change('due', e.target.value)}
-              className="h-9 rounded-[3px] border border-line bg-surface px-3 text-[0.82rem] text-ink outline-none transition focus:border-amber/60 focus:ring-2 focus:ring-amber/20"
+              className="h-9 rounded-lg border border-line bg-surface px-3 text-[0.82rem] text-ink outline-none transition focus:border-amber/60 focus:ring-2 focus:ring-amber/20"
             />
           </label>
           <label className="grid gap-1.5 text-[0.78rem] text-ink">
@@ -242,7 +246,7 @@ function WorkInboxSection({ queue, tasks, onPost, onSchedule, onRemove }) {
             <select
               value={form.est}
               onChange={(e) => change('est', e.target.value)}
-              className="h-9 rounded-[3px] border border-line bg-surface px-2 text-[0.82rem] text-ink outline-none transition focus:border-amber/60 focus:ring-2 focus:ring-amber/20"
+              className="h-9 rounded-lg border border-line bg-surface px-2 text-[0.82rem] text-ink outline-none transition focus:border-amber/60 focus:ring-2 focus:ring-amber/20"
             >
               <option value="30">30 min</option>
               <option value="45">45 min</option>
@@ -256,7 +260,7 @@ function WorkInboxSection({ queue, tasks, onPost, onSchedule, onRemove }) {
             <select
               value={form.type}
               onChange={(e) => change('type', e.target.value)}
-              className="h-9 rounded-[3px] border border-line bg-surface px-2 text-[0.82rem] text-ink outline-none transition focus:border-amber/60 focus:ring-2 focus:ring-amber/20"
+              className="h-9 rounded-lg border border-line bg-surface px-2 text-[0.82rem] text-ink outline-none transition focus:border-amber/60 focus:ring-2 focus:ring-amber/20"
             >
               <option value="focus">Focus</option>
               <option value="class">Class</option>
@@ -270,7 +274,7 @@ function WorkInboxSection({ queue, tasks, onPost, onSchedule, onRemove }) {
               onChange={(e) => change('notes', e.target.value)}
               rows={2}
               placeholder="Details, resources, requirements..."
-              className="rounded-[3px] border border-line bg-surface px-3 py-2 text-[0.82rem] text-ink outline-none transition focus:border-amber/60 focus:ring-2 focus:ring-amber/20"
+              className="rounded-lg border border-line bg-surface px-3 py-2 text-[0.82rem] text-ink outline-none transition focus:border-amber/60 focus:ring-2 focus:ring-amber/20"
             />
           </label>
         </div>
@@ -303,7 +307,7 @@ function WorkInboxSection({ queue, tasks, onPost, onSchedule, onRemove }) {
                 <div className="flex flex-wrap items-center gap-2">
                   <div className="truncate text-[0.9rem] font-semibold text-ink">{item.title}</div>
                   {item.course && (
-                    <span className="rounded-[3px] border border-line px-1.5 py-0.5 font-mono text-[0.54rem] tracking-[0.08em] text-dim uppercase">
+                    <span className="rounded-lg border border-line px-1.5 py-0.5 font-mono text-[0.54rem] tracking-[0.08em] text-dim uppercase">
                       {item.course}
                     </span>
                   )}
@@ -352,23 +356,33 @@ function WorkInboxSection({ queue, tasks, onPost, onSchedule, onRemove }) {
   )
 }
 
-function UserCard() {
+function UserCard({ user, onLogout }) {
   return (
     <div className="flex items-center gap-2.5 rounded-xl border border-line/80 bg-surface/70 p-2.5 lg:w-full">
       <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full border border-amber/30 bg-amber/10 font-grotesk text-[0.7rem] font-bold text-amber">
-        AM
+        {userInitials(user)}
       </span>
-      <span className="min-w-0">
-        <span className="block truncate text-[0.78rem] font-semibold text-ink">Ama Mensah</span>
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-[0.78rem] font-semibold text-ink">
+          {userFullName(user)}
+        </span>
         <span className="block font-mono text-[0.54rem] tracking-[0.14em] text-dim uppercase">
-          Student
+          {user?.persona || 'Student'}
         </span>
       </span>
+      <button
+        type="button"
+        onClick={onLogout}
+        title="Log out"
+        className="shrink-0 rounded-lg px-2 py-1 font-mono text-[0.54rem] tracking-[0.12em] text-dim uppercase transition-colors hover:bg-deck/70 hover:text-ink"
+      >
+        Log out
+      </button>
     </div>
   )
 }
 
-function DashboardRail({ active, onNav, unread }) {
+function DashboardRail({ active, onNav, unread, user, onLogout }) {
   const [menuOpen, setMenuOpen] = useState(false)
   const menuRef = useRef(null)
   const menuButtonRef = useRef(null)
@@ -431,7 +445,7 @@ function DashboardRail({ active, onNav, unread }) {
             aria-expanded={menuOpen}
             aria-controls="ff-dashboard-menu"
             aria-label={menuOpen ? 'Close dashboard menu' : 'Open dashboard menu'}
-            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-[3px] border border-line bg-surface text-ink transition duration-150 hover:border-dim focus-visible:ring-2 focus-visible:ring-amber/35 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas focus-visible:outline-none lg:hidden"
+            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-line bg-surface text-ink transition duration-150 hover:border-dim focus-visible:ring-2 focus-visible:ring-amber/35 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas focus-visible:outline-none lg:hidden"
           >
             <MenuIcon open={menuOpen} className="h-4 w-4" />
           </button>
@@ -441,7 +455,7 @@ function DashboardRail({ active, onNav, unread }) {
           id="ff-dashboard-menu"
           ref={menuRef}
           className={cx(
-            'ffd-menu absolute top-full right-0 z-30 mt-2 max-h-[calc(100vh-6rem)] w-[min(280px,calc(100vw-2rem))] overflow-y-auto rounded-2xl border border-line/80 bg-surface p-2 shadow-[0_24px_70px_-30px_rgba(0,0,0,0.95)] lg:static lg:mt-0 lg:w-full lg:overflow-visible lg:rounded-none lg:border-0 lg:bg-transparent lg:p-0 lg:shadow-none lg:contents',
+            'ffd-menu absolute top-full right-0 z-30 mt-2 max-h-[calc(100vh-6rem)] w-[min(280px,calc(100vw-2rem))] overflow-y-auto rounded-2xl border border-line/80 bg-surface p-2 shadow-[0_24px_60px_-30px_rgba(16,27,59,0.35)] lg:static lg:mt-0 lg:w-full lg:overflow-visible lg:rounded-none lg:border-0 lg:bg-transparent lg:p-0 lg:shadow-none lg:contents',
             menuOpen ? 'block' : 'hidden',
           )}
         >
@@ -459,7 +473,7 @@ function DashboardRail({ active, onNav, unread }) {
               )
               const unreadBadge = section.id === 'sec-notes' && unread > 0 && (
                 <span
-                  className="rounded-full bg-amber px-1.5 py-0.5 font-mono text-[0.56rem] font-semibold tracking-normal text-[#171205]"
+                  className="rounded-full bg-amber px-1.5 py-0.5 font-mono text-[0.56rem] font-semibold tracking-normal text-white"
                   aria-label={`${unread} unread notifications`}
                 >
                   {unread}
@@ -496,12 +510,12 @@ function DashboardRail({ active, onNav, unread }) {
           </nav>
 
           <div className="mt-2 border-t border-line/60 px-1 pt-3 pb-1 lg:hidden">
-            <UserCard />
+            <UserCard user={user} onLogout={onLogout} />
           </div>
         </div>
 
         <div className="hidden lg:block">
-          <UserCard />
+          <UserCard user={user} onLogout={onLogout} />
         </div>
       </div>
     </aside>
@@ -512,6 +526,8 @@ export default function Dashboard() {
   usePageTitle('Dashboard — FocusFlow')
 
   const today = useMemo(() => new Date(), [])
+  const user = useMemo(() => getSessionUser(), [])
+  const navigate = useNavigate()
   const [board, setBoard] = useState(() => loadBoard(today))
   const [active, setActive] = useState('sec-focus')
   const [toast, setToast] = useState('')
@@ -530,7 +546,7 @@ export default function Dashboard() {
   const remainRef = useRef(remainSec)
   const sessionTaskRef = useRef(null)
 
-  const [chat, setChat] = useState(INITIAL_CHAT)
+  const [chat, setChat] = useState(() => initialChat(userFirstName(user)))
   const [chatInput, setChatInput] = useState('')
   const [chatPending, setChatPending] = useState(false)
   const chatLogRef = useRef(null)
@@ -886,7 +902,7 @@ export default function Dashboard() {
   return (
     <div
       id="dashboard"
-      className="ff-dashboard ff-app relative min-h-screen bg-canvas font-sans text-ink"
+      className="ff-product ff-dashboard ff-app relative min-h-screen bg-canvas font-sans text-ink"
     >
       <div aria-hidden="true" className="pointer-events-none fixed inset-0">
         <div className="absolute -top-40 -left-32 h-[520px] w-[520px] rounded-full bg-amber/[0.06] blur-3xl" />
@@ -896,14 +912,23 @@ export default function Dashboard() {
       </div>
 
       <div className="relative mx-auto w-full max-w-[1320px] px-4 py-6 sm:px-6 lg:grid lg:grid-cols-[200px_minmax(0,1fr)] lg:items-start lg:gap-8 lg:px-8 lg:py-8">
-        <DashboardRail active={active} onNav={handleNav} unread={unread} />
+        <DashboardRail
+          active={active}
+          onNav={handleNav}
+          unread={unread}
+          user={user}
+          onLogout={() => {
+            logout()
+            navigate('/login', { replace: true })
+          }}
+        />
 
         <main className="ff-main mt-5 min-w-0 lg:mt-0">
           <div className="ff-top flex flex-wrap items-end justify-between gap-x-6 gap-y-4">
             <div className="min-w-0">
               <SectionLabel className="text-amber/85">{fmtLongDate(today)}</SectionLabel>
               <h1 className="mt-2.5 font-grotesk text-[2rem] leading-[1.05] font-bold tracking-[-0.035em] text-ink sm:text-[2.6rem]">
-                {greeting(today)}
+                {greeting(today, userFirstName(user))}
               </h1>
               <p className="mt-3 max-w-xl text-[0.9rem] leading-relaxed text-dim">
                 {nextCopy}
@@ -1021,7 +1046,7 @@ export default function Dashboard() {
         role="status"
         aria-live="polite"
         className={cx(
-          'ffd-toast fixed bottom-5 left-1/2 z-40 w-[92vw] max-w-[420px] -translate-x-1/2 rounded-xl border border-amber/30 bg-[#1b1a17] px-4 py-3 text-center text-[0.8rem] font-medium text-ink shadow-[0_22px_70px_-24px_rgba(0,0,0,0.9)]',
+          'ffd-toast fixed bottom-5 left-1/2 z-40 w-[92vw] max-w-[420px] -translate-x-1/2 rounded-xl border border-amber/30 bg-surface px-4 py-3 text-center text-[0.8rem] font-medium text-ink shadow-[0_22px_70px_-30px_rgba(16,27,59,0.35)]',
           toast ? 'translate-y-0 opacity-100' : 'pointer-events-none translate-y-2 opacity-0',
         )}
       >

@@ -13,7 +13,7 @@ export default function Landing() {
   usePageTitle('FocusFlow AI — The week, under control')
 
   return (
-    <div className="min-h-screen bg-canvas font-grotesk text-ink">
+    <div className="ff-product min-h-screen bg-canvas font-grotesk text-ink">
       <Navbar />
       <main>
         <Hero />

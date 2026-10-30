@@ -13,8 +13,12 @@ import {
   makeNotes,
   makeSuggestions,
   saveBoard,
+  userFirstName,
+  userFullName,
+  userInitials,
 } from '../Dashboard/data.js'
 import { buildPlannerContext, sendPlannerMessage } from '@/lib/ai'
+import { getSessionUser } from '@/lib/mockAuth'
 import {
   BrandMark,
   BTN,
@@ -26,14 +30,14 @@ import {
 } from '../Dashboard/ui.jsx'
 import { ChatSection } from '../Dashboard/ChatNotes.jsx'
 
-const INITIAL_CHAT = [
+const initialChat = (name) => [
   {
     role: 'ai',
-    text: 'Hi Ama. Ask me what to focus on next, why a deadline is risky, or whether your workload is too heavy.',
+    text: `Hi ${name}. Ask me what to focus on next, why a deadline is risky, or whether your workload is too heavy.`,
   },
 ]
 
-function AiPlannerNav({ open, onClose, active, unread }) {
+function AiPlannerNav({ open, onClose, active, unread, user }) {
   useEffect(() => {
     if (!open) return undefined
 
@@ -64,13 +68,13 @@ function AiPlannerNav({ open, onClose, active, unread }) {
         type="button"
         aria-label="Close navigation menu"
         onClick={onClose}
-        className="fixed inset-0 z-30 h-full w-full cursor-default bg-black/60 backdrop-blur-sm lg:hidden"
+        className="fixed inset-0 z-30 h-full w-full cursor-default bg-inkwell/35 backdrop-blur-sm lg:hidden"
       />
 
       <aside
         id="ff-ai-nav"
         aria-label="AI planner navigation"
-        className="fixed top-14 bottom-0 left-0 z-40 flex w-[min(300px,86vw)] flex-col border-r border-line/80 bg-canvas p-5 shadow-[0_24px_70px_-20px_rgba(0,0,0,0.95)] lg:static lg:z-auto lg:w-[200px] lg:shrink-0 lg:border-r-0 lg:bg-transparent lg:p-0 lg:shadow-none"
+        className="fixed top-14 bottom-0 left-0 z-40 flex w-[min(300px,86vw)] flex-col border-r border-line/80 bg-canvas p-5 shadow-[0_24px_60px_-25px_rgba(16,27,59,0.35)] lg:static lg:z-auto lg:w-[200px] lg:shrink-0 lg:border-r-0 lg:bg-transparent lg:p-0 lg:shadow-none"
       >
         <div className="flex items-center gap-3">
           <Link
@@ -105,7 +109,7 @@ function AiPlannerNav({ open, onClose, active, unread }) {
                 <span>{item.label}</span>
                 {item.id === 'chat' && unread > 0 && (
                   <span
-                    className="rounded-full bg-amber px-1.5 py-0.5 font-mono text-[0.56rem] font-semibold tracking-normal text-[#171205]"
+                    className="rounded-full bg-amber px-1.5 py-0.5 font-mono text-[0.56rem] font-semibold tracking-normal text-white"
                     aria-label={`${unread} unread notifications`}
                   >
                     {unread}
@@ -123,10 +127,12 @@ function AiPlannerNav({ open, onClose, active, unread }) {
             className="flex items-center gap-2.5 rounded-xl border border-line/80 bg-surface/70 p-2.5"
           >
             <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full border border-amber/30 bg-amber/10 font-grotesk text-[0.7rem] font-bold text-amber">
-              AM
+              {userInitials(user)}
             </span>
             <span className="min-w-0">
-              <span className="block truncate text-[0.78rem] font-semibold text-ink">Ama Mensah</span>
+              <span className="block truncate text-[0.78rem] font-semibold text-ink">
+                {userFullName(user)}
+              </span>
               <span className="block font-mono text-[0.54rem] tracking-[0.14em] text-dim uppercase">Back to dashboard</span>
             </span>
           </Link>
@@ -140,6 +146,7 @@ export default function AiPlanner() {
   usePageTitle('AI Planner — FocusFlow')
 
   const today = useMemo(() => new Date(), [])
+  const user = useMemo(() => getSessionUser(), [])
   const [board, setBoard] = useState(() => loadBoard(today))
   const [active, setActive] = useState('ai-top')
   const [navOpen, setNavOpen] = useState(false)
@@ -149,7 +156,7 @@ export default function AiPlanner() {
   const openNav = useCallback(() => setNavOpen(true), [])
   const closeNav = useCallback(() => setNavOpen(false), [])
 
-  const [chat, setChat] = useState(INITIAL_CHAT)
+  const [chat, setChat] = useState(() => initialChat(userFirstName(user)))
   const [chatInput, setChatInput] = useState('')
   const [chatPending, setChatPending] = useState(false)
   const chatTimer = useRef(null)
@@ -312,7 +319,7 @@ export default function AiPlanner() {
   }
 
   return (
-    <div id="dashboard" className="ff-dashboard ff-app relative h-[100dvh] overflow-hidden bg-canvas font-sans text-ink">
+    <div id="dashboard" className="ff-product ff-dashboard ff-app relative h-[100dvh] overflow-hidden bg-canvas font-sans text-ink">
       <div aria-hidden="true" className="pointer-events-none fixed inset-0">
         <div className="absolute -top-40 -left-32 h-[520px] w-[520px] rounded-full bg-amber/[0.06] blur-3xl" />
         <div className="absolute top-1/4 -right-40 h-[420px] w-[420px] rounded-full bg-cyan/[0.04] blur-3xl" />
@@ -328,7 +335,7 @@ export default function AiPlanner() {
             aria-expanded={navOpen}
             aria-controls="ff-ai-nav"
             aria-label={navOpen ? 'Close navigation menu' : 'Open navigation menu'}
-            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-[3px] border border-line bg-surface text-ink transition duration-150 hover:border-dim focus-visible:ring-2 focus-visible:ring-amber/35 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas focus-visible:outline-none"
+            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-line bg-surface text-ink transition duration-150 hover:border-dim focus-visible:ring-2 focus-visible:ring-amber/35 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas focus-visible:outline-none"
           >
             <MenuIcon open={navOpen} className="h-4 w-4" />
           </button>
@@ -340,6 +347,7 @@ export default function AiPlanner() {
             onClose={closeNav}
             active={active}
             unread={unread}
+            user={user}
           />
 
           <main className="ff-main flex min-h-0 min-w-0 flex-1 flex-col">
@@ -366,7 +374,7 @@ export default function AiPlanner() {
         role="status"
         aria-live="polite"
         className={cx(
-          'ffd-toast fixed bottom-5 left-1/2 z-40 w-[92vw] max-w-[420px] -translate-x-1/2 rounded-xl border border-amber/30 bg-[#1b1a17] px-4 py-3 text-center text-[0.8rem] font-medium text-ink shadow-[0_22px_70px_-24px_rgba(0,0,0,0.9)]',
+          'ffd-toast fixed bottom-5 left-1/2 z-40 w-[92vw] max-w-[420px] -translate-x-1/2 rounded-xl border border-amber/30 bg-surface px-4 py-3 text-center text-[0.8rem] font-medium text-ink shadow-[0_22px_70px_-30px_rgba(16,27,59,0.35)]',
           toast ? 'translate-y-0 opacity-100' : 'pointer-events-none translate-y-2 opacity-0',
         )}
       >

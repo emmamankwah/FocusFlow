@@ -47,20 +47,20 @@ export default function TextField({
   autoFocus,
   error,
   hint,
+  describedBy,
   registration,
 }) {
   const [show, setShow] = useState(false)
   const isPassword = type === 'password'
 
-  const describedBy =
-    (error ? `${id}-error` : hint ? `${id}-hint` : null) || undefined
+  const describedByIds =
+    [error ? `${id}-error` : null, hint ? `${id}-hint` : null, describedBy]
+      .filter(Boolean)
+      .join(' ') || undefined
 
   return (
     <div>
-      <label
-        htmlFor={id}
-        className="mb-1.5 block font-mono text-[0.7rem] tracking-[0.14em] text-dim uppercase"
-      >
+      <label htmlFor={id} className="mb-1.5 block text-[0.85rem] font-semibold text-inkwell">
         {label}
       </label>
       <div className={isPassword ? 'relative' : undefined}>
@@ -71,32 +71,32 @@ export default function TextField({
           autoComplete={autoComplete}
           autoFocus={autoFocus}
           aria-invalid={error ? true : undefined}
-          aria-describedby={describedBy}
-          className={`w-full rounded-xl border border-line bg-deck/80 px-3.5 py-2.5 text-[0.9rem] text-ink outline-none transition-all duration-200 placeholder:text-dim hover:border-dim/70 focus:border-amber/60 focus:bg-deck focus:ring-4 focus:ring-amber/10 ${
-            error ? 'border-coral/60' : ''
-          } ${isPassword ? 'pr-11' : ''}`}
+          aria-describedby={describedByIds}
+          className={`h-12 w-full rounded-xl border bg-white px-3.5 text-[0.95rem] text-inkwell outline-none transition-all duration-200 placeholder:text-inkwell/40 hover:border-inkwell/40 focus:border-cobalt focus:ring-4 focus:ring-cobalt/15 ${
+            error ? 'border-[#b42318]' : 'border-inkwell/20'
+          } ${isPassword ? 'pr-12' : ''}`}
           {...registration}
         />
         {isPassword && (
           <button
             type="button"
-            onClick={() => setShow((s) => !s)}
+            onClick={() => setShow((state) => !state)}
             aria-label={show ? 'Hide password' : 'Show password'}
             aria-pressed={show}
             title={show ? 'Hide password' : 'Show password'}
-            className="absolute top-1/2 right-1.5 grid h-8 w-8 -translate-y-1/2 place-items-center rounded-lg text-dim transition-colors hover:bg-line/40 hover:text-ink focus-visible:ring-2 focus-visible:ring-amber/30"
+            className="absolute top-1/2 right-1.5 grid h-9 w-9 -translate-y-1/2 place-items-center rounded-lg text-inkwell/55 transition-colors hover:bg-cobalt/5 hover:text-inkwell focus-visible:ring-2 focus-visible:ring-cobalt/30"
           >
             {show ? <EyeOffIcon /> : <EyeIcon />}
           </button>
         )}
       </div>
       {hint && !error && (
-        <p id={`${id}-hint`} className="mt-1.5 text-[0.72rem] text-dim">
+        <p id={`${id}-hint`} className="mt-1.5 text-[0.76rem] text-inkwell/60">
           {hint}
         </p>
       )}
       {error && (
-        <p id={`${id}-error`} className="mt-1.5 text-[0.75rem] text-coral">
+        <p id={`${id}-error`} role="alert" className="mt-1.5 text-[0.76rem] font-medium text-[#b42318]">
           {error.message}
         </p>
       )}

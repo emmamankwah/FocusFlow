@@ -26,7 +26,7 @@ export function FocusSection({
     <section
       id="sec-focus"
       aria-label="Focus session"
-      className="ffd-section relative overflow-hidden rounded-2xl border border-amber/20 bg-surface p-5 shadow-[0_30px_90px_-50px_rgba(242,184,75,0.35)]"
+      className="ffd-section relative overflow-hidden rounded-2xl border border-amber/20 bg-surface p-5 shadow-[0_30px_90px_-50px_rgba(47,69,255,0.4)]"
     >
       <div
         aria-hidden="true"
@@ -61,7 +61,7 @@ export function FocusSection({
                 className={cx(
                   'min-h-[26px] rounded-full border px-3 py-1 text-[0.72rem] font-semibold transition',
                   durationMin === mins
-                    ? 'border-amber bg-amber text-[#171205]'
+                    ? 'border-amber bg-amber text-white'
                     : 'border-line bg-surface text-dim hover:border-dim hover:text-ink',
                 )}
               >
@@ -196,7 +196,7 @@ export function PlanSection({
                     className={cx(
                       'grid h-6 w-6 place-items-center rounded-md border-2 transition duration-150',
                       isDone
-                        ? 'border-amber bg-amber text-[#171205]'
+                        ? 'border-amber bg-amber text-white'
                         : 'border-line bg-surface text-transparent hover:border-amber hover:text-amber/40',
                     )}
                   >
@@ -221,9 +221,9 @@ export function PlanSection({
                       </p>
                       <span
                         className={cx(
-                          'inline-flex items-center rounded-[3px] border px-1.5 py-0.5 font-mono text-[0.56rem] tracking-[0.08em] uppercase',
+                          'inline-flex items-center rounded-lg border px-1.5 py-0.5 font-mono text-[0.56rem] tracking-[0.08em] uppercase',
                           isNext
-                            ? 'border-amber/30 bg-amber text-[#171205]'
+                            ? 'border-amber/30 bg-amber text-white'
                             : 'border-line bg-deck text-dim',
                         )}
                       >

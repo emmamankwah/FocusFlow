@@ -71,9 +71,25 @@ export function fmtWeekday(date) {
   return date.toLocaleDateString('en-GB', { weekday: 'short' })
 }
 
-export function greeting(date = new Date()) {
+export function greeting(date = new Date(), name = '') {
   const h = date.getHours()
-  return `${h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening'}, Ama`
+  const salutation = h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening'
+  return name ? `${salutation}, ${name}` : salutation
+}
+
+export function userFirstName(user) {
+  return user?.firstName?.trim() || user?.username?.trim() || 'there'
+}
+
+export function userFullName(user) {
+  const full = [user?.firstName, user?.lastName].filter(Boolean).join(' ').trim()
+  return full || user?.username?.trim() || 'Your account'
+}
+
+export function userInitials(user) {
+  const first = user?.firstName?.[0] || user?.username?.[0] || 'F'
+  const last = user?.lastName?.[0] || user?.username?.[1] || ''
+  return `${first}${last}`.toUpperCase()
 }
 
 export function formatClock(totalSeconds) {

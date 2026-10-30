@@ -8,7 +8,7 @@ import GuestRoute from './components/GuestRoute.jsx'
 const Landing = lazy(() => import('./pages/Landing/Landing.jsx'))
 const Register = lazy(() => import('./pages/Auth/Register.jsx'))
 const Login = lazy(() => import('./pages/Auth/Login.jsx'))
-const VerifyOtp = lazy(() => import('./pages/Auth/VerifyOtp.jsx'))
+const VerifyEmail = lazy(() => import('./pages/Auth/VerifyEmail.jsx'))
 const ForgotPassword = lazy(() => import('./pages/Auth/ForgotPassword.jsx'))
 const ResetPassword = lazy(() => import('./pages/Auth/ResetPassword.jsx'))
 const Dashboard = lazy(() => import('./pages/Dashboard/Dashboard.jsx'))
@@ -39,10 +39,10 @@ export default function App() {
           }
         />
         <Route
-          path="/verify-otp"
+          path="/verify-email"
           element={
             <GuestRoute>
-              <VerifyOtp />
+              <VerifyEmail />
             </GuestRoute>
           }
         />

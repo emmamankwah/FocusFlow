@@ -3,12 +3,13 @@ export default function SubmitButton({ loading, loadingText, disabled, children 
     <button
       type="submit"
       disabled={loading || disabled}
-      className="group btn btn-primary w-full justify-center gap-2 rounded-xl px-5 py-3.5 shadow-[0_16px_38px_-18px_rgba(242,184,75,0.7)] transition-all duration-200 hover:shadow-[0_20px_44px_-18px_rgba(242,184,75,0.8)] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0"
+      aria-busy={loading}
+      className="group inline-flex h-12 w-full items-center justify-center gap-2.5 rounded-xl bg-cobalt px-5 text-[0.95rem] font-semibold text-white shadow-[0_18px_36px_-20px_rgba(47,69,255,0.85)] transition-all duration-200 hover:-translate-y-px hover:bg-[#2438e6] disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-55"
     >
       {loading && (
         <span
           aria-hidden
-          className="h-4 w-4 animate-spin rounded-full border-2 border-[#171205]/25 border-t-[#171205]"
+          className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white"
         />
       )}
       {loading ? loadingText : children}

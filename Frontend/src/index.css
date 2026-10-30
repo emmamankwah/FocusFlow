@@ -16,6 +16,19 @@
   --color-cyan: #5fd3c4;
   --color-coral: #ff7a68;
 
+  /* Cobalt product system (auth, and the product as it migrates) */
+  --color-paper: #eef1f6;
+  --color-inkwell: #101b3b;
+  --color-cobalt: #2f45ff;
+  --color-highlight: #e4f24f;
+  --color-periwinkle: #b7c0ff;
+  --color-mint: #9be3c4;
+  --color-blush: #ff8fa9;
+  --color-lilac: #9c9af0;
+  --color-rose: #ff5d7d;
+
+  --font-display: "Bricolage Grotesque", ui-sans-serif, system-ui, sans-serif;
+
   --animate-typing: typing 1.2s ease-in-out infinite;
 
   @keyframes typing {
@@ -159,13 +172,51 @@
   }
 }
 
+/* Cobalt product surface: a scoped palette flip. The marketing landing page
+   keeps the dark editorial palette; every screen inside `.ff-product` reads as
+   the light cobalt product system. Because Tailwind utilities resolve these
+   variables at use time, one block rethemes the whole app shell. */
+.ff-product {
+  color-scheme: light;
+  --color-canvas: #eef1f6;
+  --color-surface: #ffffff;
+  --color-deck: #e6ebf4;
+  --color-ink: #101b3b;
+  --color-dim: #5c6680;
+  --color-line: #d7deea;
+  --color-amber: #2f45ff;
+  --color-cyan: #0f8f6f;
+  --color-coral: #d92d4b;
+}
+
+/* Cobalt surfaces: light controls and a white focus ring on cobalt panels. */
+.auth-shell {
+  color-scheme: light;
+}
+
+.auth-shell :focus-visible {
+  outline-color: var(--color-cobalt);
+}
+
+.auth-shell .on-cobalt :focus-visible {
+  outline-color: #ffffff;
+}
+
+/* Condensed, heavy headline setting from the variable font's width axis. */
+.display {
+  font-stretch: 75%;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 0.95;
+}
+
 @layer components {
   .btn {
-    @apply inline-flex items-center rounded-[3px] border border-transparent px-[22px] py-3 text-[0.92rem] font-semibold no-underline transition duration-150;
+    @apply inline-flex items-center rounded-lg border border-transparent px-[22px] py-3 text-[0.92rem] font-semibold no-underline transition duration-150;
   }
 
   .btn-primary {
-    @apply bg-amber text-[#171205] hover:-translate-y-px;
+    @apply bg-amber text-white hover:-translate-y-px;
   }
 
   .btn-ghost {

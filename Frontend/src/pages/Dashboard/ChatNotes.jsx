@@ -178,7 +178,7 @@ export function ChatSection({
                   className={cx(
                     'max-w-[92%] rounded-xl px-3.5 py-2.5 text-[0.84rem] leading-relaxed sm:max-w-[78%]',
                     message.role === 'user'
-                      ? 'ml-auto rounded-tr-sm bg-amber text-[#171205]'
+                      ? 'ml-auto rounded-tr-sm bg-amber text-white'
                       : 'mr-auto rounded-tl-sm border border-line bg-deck text-ink',
                   )}
                 >
@@ -207,7 +207,7 @@ export function ChatSection({
                       ref={attachMenuRef}
                       role="menu"
                       aria-label="Add options"
-                      className="absolute bottom-full left-0 z-40 mb-2 w-56 rounded-xl border border-line/80 bg-surface p-1 shadow-[0_24px_70px_-30px_rgba(0,0,0,0.95)]"
+                      className="absolute bottom-full left-0 z-40 mb-2 w-56 rounded-xl border border-line/80 bg-surface p-1 shadow-[0_24px_60px_-30px_rgba(16,27,59,0.35)]"
                     >
                       <button
                         type="button"
@@ -399,7 +399,7 @@ export function ChatSection({
             className={cx(
               'max-w-[92%] rounded-xl px-3.5 py-2.5 text-[0.8rem] leading-relaxed',
               message.role === 'user'
-                ? 'ml-auto rounded-tr-sm bg-amber text-[#171205]'
+                ? 'ml-auto rounded-tr-sm bg-amber text-white'
                 : 'mr-auto rounded-tl-sm border border-line bg-deck text-ink',
             )}
           >
