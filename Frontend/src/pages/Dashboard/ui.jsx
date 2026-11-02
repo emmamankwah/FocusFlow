@@ -1,3 +1,5 @@
+import { THEMES } from '@/lib/theme'
+
 export function cx(...parts) {
   return parts.filter(Boolean).join(' ')
 }
@@ -40,6 +42,87 @@ export function SectionLabel({ children, className = '' }) {
     >
       {children}
     </span>
+  )
+}
+
+export function ThemeSwitcher({ theme, onChange, className = '', compact = false }) {
+  if (compact) {
+    return (
+      <div
+        role="radiogroup"
+        aria-label="Dashboard theme"
+        className={cx(
+          'flex items-center gap-1.5 rounded-lg border border-line/80 bg-surface/70 py-1 pr-1.5 pl-2',
+          className,
+        )}
+      >
+        <SectionLabel className="text-dim">Theme</SectionLabel>
+        {THEMES.map((option) => {
+          const active = option.id === theme
+          return (
+            <button
+              key={option.id}
+              type="button"
+              role="radio"
+              aria-checked={active}
+              aria-label={`${option.label} theme`}
+              title={option.label}
+              onClick={() => onChange(option.id)}
+              className={cx(
+                'h-5 w-5 shrink-0 rounded-full border transition',
+                active
+                  ? 'border-ink ring-2 ring-amber/45'
+                  : 'border-line hover:border-dim',
+              )}
+              style={{
+                background: `linear-gradient(135deg, ${option.swatch[0]} 0 50%, ${option.swatch[1]} 50% 100%)`,
+              }}
+            />
+          )
+        })}
+      </div>
+    )
+  }
+
+  return (
+    <div className={cx('rounded-xl border border-line/80 bg-surface/70 p-2.5', className)}>
+      <SectionLabel>Theme</SectionLabel>
+      <div
+        role="radiogroup"
+        aria-label="Dashboard theme"
+        className="mt-2 grid grid-cols-4 gap-1"
+      >
+        {THEMES.map((option) => {
+          const active = option.id === theme
+          return (
+            <button
+              key={option.id}
+              type="button"
+              role="radio"
+              aria-checked={active}
+              aria-label={`${option.label} theme`}
+              title={option.label}
+              onClick={() => onChange(option.id)}
+              className={cx(
+                'flex flex-col items-center gap-1 rounded-lg border px-1 py-1.5 font-mono text-[0.5rem] tracking-[0.06em] uppercase transition',
+                active
+                  ? 'border-amber bg-amber/10 text-ink'
+                  : 'border-transparent text-dim hover:border-line hover:text-ink',
+              )}
+            >
+              <span
+                aria-hidden="true"
+                className="flex h-4 w-full overflow-hidden rounded-[3px] border border-line/70"
+              >
+                <i className="flex-1" style={{ backgroundColor: option.swatch[0] }} />
+                <i className="flex-1" style={{ backgroundColor: option.swatch[1] }} />
+              </span>
+              {option.label}
+            </button>
+          )
+        })}
+      </div>
+    </div>
   )
 }
 

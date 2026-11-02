@@ -16,9 +16,11 @@ export default defineConfig({
   server: {
     port: 3000,
     proxy: {
-      '/auth': { target: API_TARGET, changeOrigin: true },
-      '/ai': { target: API_TARGET, changeOrigin: true },
-      '/api': { target: API_TARGET, changeOrigin: true },
+      // Trailing slashes matter: a bare '/ai' would also capture the SPA route
+      // '/ai-planner' and proxy it to the API, which 502s in the browser.
+      '/auth/': { target: API_TARGET, changeOrigin: true },
+      '/ai/': { target: API_TARGET, changeOrigin: true },
+      '/api/': { target: API_TARGET, changeOrigin: true },
     },
   },
 })

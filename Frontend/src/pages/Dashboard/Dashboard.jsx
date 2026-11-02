@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import usePageTitle from '@/lib/usePageTitle'
 import { buildPlannerContext, sendPlannerMessage } from '@/lib/ai'
 import { getSessionUser, logout } from '@/lib/mockAuth'
+import { useTheme } from '@/lib/theme'
 import './dashboard.css'
 import {
   FOCUS_GOAL_HOURS,
@@ -31,6 +32,7 @@ import {
   Panel,
   SectionLabel,
   SparkIcon,
+  ThemeSwitcher,
   cx,
 } from './ui.jsx'
 import { FocusSection, PlanSection } from './FocusPlan.jsx'
@@ -382,7 +384,7 @@ function UserCard({ user, onLogout }) {
   )
 }
 
-function DashboardRail({ active, onNav, unread, user, onLogout }) {
+function DashboardRail({ active, onNav, unread, user, onLogout, theme, onTheme }) {
   const [menuOpen, setMenuOpen] = useState(false)
   const menuRef = useRef(null)
   const menuButtonRef = useRef(null)
@@ -511,11 +513,13 @@ function DashboardRail({ active, onNav, unread, user, onLogout }) {
 
           <div className="mt-2 border-t border-line/60 px-1 pt-3 pb-1 lg:hidden">
             <UserCard user={user} onLogout={onLogout} />
+            <ThemeSwitcher theme={theme} onChange={onTheme} className="mt-2" />
           </div>
         </div>
 
         <div className="hidden lg:block">
           <UserCard user={user} onLogout={onLogout} />
+          <ThemeSwitcher theme={theme} onChange={onTheme} className="mt-2" />
         </div>
       </div>
     </aside>
@@ -527,6 +531,7 @@ export default function Dashboard() {
 
   const today = useMemo(() => new Date(), [])
   const user = useMemo(() => getSessionUser(), [])
+  const [theme, setTheme] = useTheme()
   const navigate = useNavigate()
   const [board, setBoard] = useState(() => loadBoard(today))
   const [active, setActive] = useState('sec-focus')
@@ -902,6 +907,7 @@ export default function Dashboard() {
   return (
     <div
       id="dashboard"
+      data-theme={theme}
       className="ff-product ff-dashboard ff-app relative min-h-screen bg-canvas font-sans text-ink"
     >
       <div aria-hidden="true" className="pointer-events-none fixed inset-0">
@@ -917,6 +923,8 @@ export default function Dashboard() {
           onNav={handleNav}
           unread={unread}
           user={user}
+          theme={theme}
+          onTheme={setTheme}
           onLogout={() => {
             logout()
             navigate('/login', { replace: true })

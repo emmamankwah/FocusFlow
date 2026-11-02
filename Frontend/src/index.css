@@ -189,6 +189,45 @@
   --color-coral: #d92d4b;
 }
 
+.ff-product[data-theme='midnight'] {
+  color-scheme: dark;
+  --color-canvas: #0b1020;
+  --color-surface: #121a30;
+  --color-deck: #1a2440;
+  --color-ink: #eef1f6;
+  --color-dim: #9aa6c2;
+  --color-line: #263352;
+  --color-amber: #7c8cff;
+  --color-cyan: #46d3a8;
+  --color-coral: #ff7d93;
+}
+
+.ff-product[data-theme='mint'] {
+  color-scheme: light;
+  --color-canvas: #eef4ef;
+  --color-surface: #ffffff;
+  --color-deck: #e2ede5;
+  --color-ink: #10201a;
+  --color-dim: #566b61;
+  --color-line: #d3e2d8;
+  --color-amber: #0b7a57;
+  --color-cyan: #0e7490;
+  --color-coral: #c0392b;
+}
+
+.ff-product[data-theme='sunset'] {
+  color-scheme: light;
+  --color-canvas: #f8efe6;
+  --color-surface: #fffaf5;
+  --color-deck: #f1e2d3;
+  --color-ink: #2a1620;
+  --color-dim: #6f5a50;
+  --color-line: #e6d4c4;
+  --color-amber: #b8430f;
+  --color-cyan: #0f7a6b;
+  --color-coral: #b91c1c;
+}
+
 /* Cobalt surfaces: light controls and a white focus ring on cobalt panels. */
 .auth-shell {
   color-scheme: light;

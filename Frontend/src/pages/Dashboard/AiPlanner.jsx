@@ -19,6 +19,7 @@ import {
 } from '../Dashboard/data.js'
 import { buildPlannerContext, sendPlannerMessage } from '@/lib/ai'
 import { getSessionUser } from '@/lib/mockAuth'
+import { useTheme } from '@/lib/theme'
 import {
   BrandMark,
   BTN,
@@ -26,6 +27,7 @@ import {
   MenuIcon,
   SectionLabel,
   SparkIcon,
+  ThemeSwitcher,
   cx,
 } from '../Dashboard/ui.jsx'
 import { ChatSection } from '../Dashboard/ChatNotes.jsx'
@@ -147,6 +149,7 @@ export default function AiPlanner() {
 
   const today = useMemo(() => new Date(), [])
   const user = useMemo(() => getSessionUser(), [])
+  const [theme, setTheme] = useTheme()
   const [board, setBoard] = useState(() => loadBoard(today))
   const [active, setActive] = useState('ai-top')
   const [navOpen, setNavOpen] = useState(false)
@@ -319,7 +322,11 @@ export default function AiPlanner() {
   }
 
   return (
-    <div id="dashboard" className="ff-product ff-dashboard ff-app relative h-[100dvh] overflow-hidden bg-canvas font-sans text-ink">
+    <div
+      id="dashboard"
+      data-theme={theme}
+      className="ff-product ff-dashboard ff-app relative h-[100dvh] overflow-hidden bg-canvas font-sans text-ink"
+    >
       <div aria-hidden="true" className="pointer-events-none fixed inset-0">
         <div className="absolute -top-40 -left-32 h-[520px] w-[520px] rounded-full bg-amber/[0.06] blur-3xl" />
         <div className="absolute top-1/4 -right-40 h-[420px] w-[420px] rounded-full bg-cyan/[0.04] blur-3xl" />
@@ -328,7 +335,7 @@ export default function AiPlanner() {
       </div>
 
       <div className="relative mx-auto flex h-full w-full max-w-[1320px] flex-col px-4 py-4 sm:px-6 lg:px-8 lg:py-6">
-        <div className="relative z-50 flex h-10 shrink-0 items-center">
+        <div className="relative z-50 flex h-10 shrink-0 items-center gap-3">
           <button
             type="button"
             onClick={navOpen ? closeNav : openNav}
@@ -339,6 +346,12 @@ export default function AiPlanner() {
           >
             <MenuIcon open={navOpen} className="h-4 w-4" />
           </button>
+
+          <span className="hidden font-mono text-[0.58rem] tracking-[0.16em] text-dim uppercase sm:block">
+            AI Planner
+          </span>
+
+          <ThemeSwitcher theme={theme} onChange={setTheme} compact className="ml-auto" />
         </div>
 
         <div className="flex min-h-0 w-full flex-1 gap-4 lg:gap-6">
