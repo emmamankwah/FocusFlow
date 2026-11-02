@@ -46,7 +46,7 @@ export default function Audience() {
   const inView = useInView(ref, { once: true, amount: 0.2 })
 
   return (
-    <section id="audience" className="border-t border-line py-12">
+    <section id="audience" className="border-t border-line py-6">
       <div className="mx-auto max-w-[1180px] px-7">
         <motion.div
           ref={ref}

@@ -30,7 +30,7 @@ const cols = [
 
 export default function Footer() {
   return (
-    <footer className="border-t border-line py-14">
+    <footer className="border-t border-line py-10">
       <div className="mx-auto max-w-[1180px] px-7">
         <div className="grid gap-10 lg:grid-cols-5">
           <div className="lg:col-span-2">

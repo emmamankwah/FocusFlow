@@ -38,8 +38,8 @@ export default function Hero() {
   const countdown = useCountdown()
 
   return (
-    <section className="pt-6 pb-12">
-      <div className="mx-auto max-w-[820px] px-7">
+    <section className="pt-6 pb-8">
+      <div className="mx-auto max-w-[1180px] px-7">
         <div>
           <span className="inline-flex items-center gap-2 font-mono text-[0.72rem] tracking-[0.18em] text-amber uppercase">
             <span className="h-1.5 w-1.5 rounded-full bg-amber" />
