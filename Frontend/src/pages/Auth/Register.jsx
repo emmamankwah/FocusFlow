@@ -12,22 +12,9 @@ import { signup } from '@/lib/mockAuth'
 import AuthLayout from '@/components/AuthLayout'
 import TextField from '@/components/TextField'
 import Checkbox from '@/components/Checkbox'
-import Choice from '@/components/Choice'
 import SubmitButton from '@/components/SubmitButton'
 import FormError from '@/components/FormError'
 import PasswordChecklist from '@/components/PasswordChecklist'
-
-const PERSONAS = [
-  { value: 'Student', label: 'Student', hint: 'Coursework + exams' },
-  { value: 'Creator', label: 'Creator', hint: 'Projects + clients' },
-  { value: 'Professional', label: 'Professional', hint: 'Work + side gigs' },
-]
-
-const PEAK_TIMES = [
-  { value: 'morning', label: 'Morning', hint: 'Before noon' },
-  { value: 'afternoon', label: 'Afternoon', hint: '12–5pm' },
-  { value: 'evening', label: 'Evening', hint: 'After 5pm' },
-]
 
 export default function Register() {
   usePageTitle('Create account — FocusFlow')
@@ -47,8 +34,6 @@ export default function Register() {
       email: '',
       password: '',
       confirmPassword: '',
-      persona: 'Student',
-      peakTime: 'morning',
       terms: false,
     },
   })
@@ -142,20 +127,6 @@ export default function Register() {
           autoComplete="new-password"
           error={errors.confirmPassword}
           registration={register('confirmPassword', confirmPasswordRules)}
-        />
-
-        <Choice
-          legend="What are you planning for?"
-          name="persona"
-          options={PERSONAS}
-          register={register}
-        />
-
-        <Choice
-          legend="When do you focus best?"
-          name="peakTime"
-          options={PEAK_TIMES}
-          register={register}
         />
 
         <div>
