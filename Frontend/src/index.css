@@ -172,10 +172,10 @@
   }
 }
 
-/* Cobalt product surface: a scoped palette flip. The marketing landing page
-   keeps the dark editorial palette; every screen inside `.ff-product` reads as
-   the light cobalt product system. Because Tailwind utilities resolve these
-   variables at use time, one block rethemes the whole app shell. */
+/* Scoped product palette. Landing and app surfaces opt in with `.ff-product`,
+   which flips the base editorial tokens to the light cobalt system. Because
+   Tailwind utilities resolve these variables at use time, one block rethemes
+   the whole subtree. */
 .ff-product {
   color-scheme: light;
   --color-canvas: #eef1f6;
@@ -185,8 +185,28 @@
   --color-dim: #5c6680;
   --color-line: #d7deea;
   --color-amber: #2f45ff;
-  --color-cyan: #0f8f6f;
-  --color-coral: #d92d4b;
+  --color-cyan: #0b7a5e;
+  --color-coral: #c81e3c;
+}
+
+/* Keep the document canvas in sync with the scoped product surface so
+   overscroll and short pages do not flash the dark landing palette. */
+body:has(.ff-product) {
+  background-color: #eef1f6;
+  color-scheme: light;
+}
+
+body:has(.ff-product[data-theme='midnight']) {
+  background-color: #0b1020;
+  color-scheme: dark;
+}
+
+body:has(.ff-product[data-theme='mint']) {
+  background-color: #eef4ef;
+}
+
+body:has(.ff-product[data-theme='sunset']) {
+  background-color: #f8efe6;
 }
 
 .ff-product[data-theme='midnight'] {
@@ -255,7 +275,7 @@
   }
 
   .btn-primary {
-    @apply bg-amber text-white hover:-translate-y-px;
+    @apply bg-amber text-canvas hover:-translate-y-px;
   }
 
   .btn-ghost {
@@ -264,6 +284,20 @@
 
   .btn-sm {
     @apply px-4 py-2.5 text-[0.88rem];
+  }
+
+  /* Marketing artifacts: the product surfaces on the landing page. They are
+     deliberately plain (no glow, no glass) so the content carries the page. */
+  .artifact {
+    @apply rounded-xl border border-line bg-surface;
+  }
+
+  .eyebrow {
+    @apply font-mono text-[0.7rem] font-medium tracking-[0.18em] text-amber uppercase;
+  }
+
+  .chip {
+    @apply inline-flex items-center gap-1.5 rounded-full border border-line px-2.5 py-1 font-mono text-[0.64rem] tracking-[0.1em] text-dim uppercase;
   }
 }
 

@@ -3,9 +3,10 @@ import { Link } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 
 const links = [
-  { label: 'How it works', href: '#signals' },
+  { label: 'How it works', href: '#how' },
+  { label: 'Your week', href: '#week' },
   { label: 'Features', href: '#features' },
-  { label: "Who it's for", href: '#audience' },
+  { label: 'FAQ', href: '#faq' },
 ]
 
 export default function Navbar() {
@@ -41,16 +42,16 @@ export default function Navbar() {
   return (
     <header
       ref={headerRef}
-      className={`sticky top-0 z-50 border-b border-line backdrop-blur transition-colors duration-300 ${
-        scrolled ? 'bg-canvas/85' : 'bg-canvas/60'
+      className={`sticky top-0 z-50 border-b backdrop-blur transition-colors duration-300 ${
+        scrolled ? 'border-line bg-canvas/85' : 'border-transparent bg-canvas/40'
       }`}
     >
-      <nav className="mx-auto flex max-w-[1180px] items-center justify-between px-7 py-5">
+      <nav className="mx-auto flex max-w-[1180px] items-center justify-between px-7 py-4">
         <Link to="/" className="text-[1.1rem] font-bold tracking-[-0.01em] text-ink">
           Focus<span className="text-amber">Flow</span>
         </Link>
 
-        <div className="hidden items-center gap-7 text-[0.9rem] text-dim lg:flex">
+        <div className="hidden items-center gap-7 text-[0.88rem] text-dim lg:flex">
           {links.map((link) => (
             <a key={link.href} href={link.href} className="transition-colors hover:text-ink">
               {link.label}
@@ -60,7 +61,7 @@ export default function Navbar() {
 
         <div className="hidden items-center gap-3 lg:flex">
           <Link to="/login" className="btn btn-ghost btn-sm">
-            Sign in
+            Log in
           </Link>
           <Link to="/signup" className="btn btn-primary btn-sm">
             Get started
@@ -115,7 +116,7 @@ export default function Navbar() {
               ))}
               <div className="mt-2 flex flex-col gap-2">
                 <Link to="/login" className="btn btn-ghost w-full justify-center">
-                  Sign in
+                  Log in
                 </Link>
                 <Link to="/signup" className="btn btn-primary w-full justify-center">
                   Get started

@@ -53,33 +53,40 @@ function useCountUp(target, active, duration = 1100) {
   return value
 }
 
-const tileClass = 'rounded-[4px] border border-line bg-surface p-6'
+const tileClass = 'rounded-xl border border-line bg-surface p-6'
 
 function ChartTile() {
   const ref = useRef(null)
   const inView = useInView(ref, { once: true, amount: 0.4 })
 
   return (
-    <div ref={ref} className={`${tileClass} md:row-span-2`}>
-      <h3 className="mb-1.5 text-base font-semibold">Your week, at a glance</h3>
-      <p className="mb-4 text-[0.85rem] leading-normal text-dim">
-        Focus time by day, so you can see what&apos;s actually working — not just what&apos;s
+    <div ref={ref} className={`${tileClass} flex flex-col md:row-span-2`}>
+      <div className="flex items-start justify-between gap-3">
+        <h3 className="text-base font-semibold text-ink">Your week, at a glance</h3>
+        <span className="chip">Sample</span>
+      </div>
+      <p className="mt-1.5 mb-5 text-[0.85rem] leading-normal text-dim">
+        Focus time by day, so you can see what is actually working &mdash; not just what is
         scheduled.
       </p>
 
-      <div className="flex h-[140px] items-end gap-2.5">
+      <div className="flex min-h-[150px] flex-1 items-end gap-2.5">
         {BAR_DATA.map((bar, i) => (
           <div key={bar.day} className="flex h-full flex-1 flex-col items-center justify-end gap-2">
             <motion.div
               initial={{ height: 0 }}
               animate={inView ? { height: `${bar.value}%` } : { height: 0 }}
               transition={{ duration: 1, delay: i * 0.05, ease: EASE }}
-              className={`w-full rounded-t-[2px] ${bar.peak ? 'bg-amber' : 'bg-cyan'}`}
+              className={`w-full rounded-t-sm ${bar.peak ? 'bg-amber' : 'bg-cyan/70'}`}
             />
-            <span className="text-[0.66rem] text-dim">{bar.day}</span>
+            <span className="font-mono text-[0.62rem] text-dim">{bar.day}</span>
           </div>
         ))}
       </div>
+
+      <p className="mt-5 border-t border-line pt-4 text-[0.74rem] text-dim">
+        Wednesday carries the most focus time. Saturday is deliberately light.
+      </p>
     </div>
   )
 }
@@ -91,22 +98,15 @@ function RiskTile() {
 
   return (
     <div ref={ref} className={tileClass}>
-      <h3 className="mb-1.5 text-base font-semibold">Odds before it&apos;s too late</h3>
+      <h3 className="mb-1.5 text-base font-semibold text-ink">Odds before it is too late</h3>
       <p className="mb-4 text-[0.85rem] leading-normal text-dim">
-        A live estimate of finishing on time — and what closes the gap.
+        A live estimate of finishing on time &mdash; and what closes the gap.
       </p>
 
       <div className="flex items-center gap-4">
         <div className="relative h-16 w-16 flex-shrink-0">
           <svg viewBox="0 0 64 64" width="64" height="64" className="-rotate-90">
-            <circle
-              cx="32"
-              cy="32"
-              r="28"
-              fill="none"
-              strokeWidth="5"
-              className="stroke-deck"
-            />
+            <circle cx="32" cy="32" r="28" fill="none" strokeWidth="5" className="stroke-deck" />
             <motion.circle
               cx="32"
               cy="32"
@@ -130,8 +130,8 @@ function RiskTile() {
           </span>
         </div>
         <p className="text-[0.82rem] leading-normal text-dim">
-          chance of missing{' '}
-          <b className="font-semibold text-ink">Database assignment</b> without two hours today.
+          chance of missing <b className="font-semibold text-ink">Database assignment</b> without
+          two hours today.
         </p>
       </div>
     </div>
@@ -152,13 +152,13 @@ function ChatTile() {
 
   return (
     <div ref={ref} className={tileClass}>
-      <h3 className="mb-1.5 text-base font-semibold">Ask it directly</h3>
+      <h3 className="mb-1.5 text-base font-semibold text-ink">Ask it directly</h3>
       <p className="mb-4 text-[0.85rem] leading-normal text-dim">
         Plain questions, answered from your real calendar.
       </p>
 
-      <div className="max-w-[90%] rounded-[10px_10px_10px_2px] bg-deck px-3.5 py-3 text-[0.85rem]">
-        &ldquo;I have football tomorrow — rearrange my week.&rdquo;
+      <div className="max-w-[92%] rounded-[10px_10px_10px_2px] bg-deck px-3.5 py-3 text-[0.85rem] text-ink">
+        &ldquo;I have football tomorrow &mdash; rearrange my week.&rdquo;
       </div>
 
       <div className="mt-2.5 h-5" aria-hidden={showReply}>
@@ -174,11 +174,11 @@ function ChatTile() {
       </div>
 
       <div
-        className={`mt-2 max-w-[90%] rounded-[10px_10px_10px_2px] bg-deck px-3.5 py-3 text-[0.85rem] transition-opacity duration-[400ms] ${
+        className={`mt-2 max-w-[92%] rounded-[10px_10px_10px_2px] bg-deck px-3.5 py-3 text-[0.85rem] text-ink transition-opacity duration-[400ms] ${
           showReply ? 'opacity-100' : 'opacity-0'
         }`}
       >
-        Moved Thursday&apos;s reading to tonight, kept Friday clear.
+        Moved Thursday&rsquo;s reading to tonight, kept Friday clear.
       </div>
     </div>
   )
@@ -189,13 +189,13 @@ function OverloadTile() {
   const inView = useInView(ref, { once: true, amount: 0.4 })
 
   return (
-    <div ref={ref} className={tileClass}>
-      <h3 className="mb-1.5 text-base font-semibold">Catches overload early</h3>
+    <div ref={ref} className={`${tileClass} md:col-span-2`}>
+      <h3 className="mb-1.5 text-base font-semibold text-ink">Catches overload early</h3>
       <p className="mb-4 text-[0.85rem] leading-normal text-dim">
         This week compared with your normal pace.
       </p>
 
-      <div className="h-2 overflow-hidden rounded-[4px] bg-deck">
+      <div className="h-2 overflow-hidden rounded-full bg-deck">
         <motion.div
           initial={{ width: 0 }}
           animate={inView ? { width: '78%' } : { width: 0 }}
@@ -213,17 +213,15 @@ function OverloadTile() {
 
 export default function Features() {
   return (
-    <section id="features" className="border-t border-line py-6">
+    <section id="features" className="border-t border-line py-16 sm:py-20">
       <div className="mx-auto max-w-[1180px] px-7">
-        <div className="mb-9">
-          <SectionHeading
-            eyebrow="Features"
-            title="What it does with that"
-            description="Live widgets, not static plans — every tile below is rebuilt from your real week."
-          />
-        </div>
+        <SectionHeading
+          eyebrow="Features"
+          title="What it does with all that"
+          description="Not static plans &mdash; every panel below is rebuilt from your real week."
+        />
 
-        <div className="grid gap-4 md:grid-cols-[1.3fr_1fr]">
+        <div className="mt-10 grid gap-4 md:grid-cols-[1.3fr_1fr]">
           <ChartTile />
           <RiskTile />
           <ChatTile />
