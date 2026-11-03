@@ -80,35 +80,35 @@ class UserRegister(PasswordValidation):
 
 
 class ResetPassword(PasswordValidation):
-    email: NormalizedEmail = Field(max_length=255)
+    email: NormalizedEmail = Field(min_length=1, max_length=255)
     otp: StrippedStr = Field(min_length=1)
     newPassword: str
 
 
 class ChangePassword(PasswordValidation):
-    email: NormalizedEmail = Field(max_length=255)
+    email: NormalizedEmail = Field(min_length=1, max_length=255)
     oldPassword: str
     newPassword: str
 
 
 class OtpRequest(BaseModel):
-    email: NormalizedEmail = Field(max_length=255)
+    email: NormalizedEmail = Field(min_length=1, max_length=255)
 
 
 class OtpVerification(BaseModel):
-    email: NormalizedEmail = Field(max_length=255)
+    email: NormalizedEmail = Field(min_length=1, max_length=255)
     otp: StrippedStr = Field(min_length=1)
 
 
 class OtpResend(BaseModel):
-    email: NormalizedEmail = Field(max_length=255)
+    email: NormalizedEmail = Field(min_length=1, max_length=255)
 
 
 class UserProfileUpdate(BaseModel):
     firstName: StrippedStr = Field(min_length=1, max_length=100)
     lastName: StrippedStr = Field(min_length=1, max_length=100)
     username: str
-    email: NormalizedEmail = Field(max_length=255)
+    email: NormalizedEmail = Field(min_length=1, max_length=255)
 
 
 class TokenResponse(BaseModel):
