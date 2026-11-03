@@ -31,6 +31,7 @@ import {
   MenuIcon,
   Panel,
   SectionLabel,
+  SidebarIcon,
   SparkIcon,
   ThemeSwitcher,
   cx,
@@ -390,7 +391,7 @@ function UserCard({ user, onLogout }) {
   )
 }
 
-function DashboardRail({ active, onNav, unread, user, onLogout, theme, onTheme }) {
+function DashboardRail({ active, onNav, unread, user, onLogout, theme, onTheme, railHidden }) {
   const [menuOpen, setMenuOpen] = useState(false)
   const menuRef = useRef(null)
   const menuButtonRef = useRef(null)
@@ -433,7 +434,13 @@ function DashboardRail({ active, onNav, unread, user, onLogout, theme, onTheme }
   }
 
   return (
-    <aside className="ff-rail relative lg:sticky lg:top-8">
+    <aside
+      id="ff-dashboard-rail"
+      className={cx(
+        'ff-rail relative lg:sticky lg:top-8',
+        railHidden && 'lg:hidden',
+      )}
+    >
       <div className="flex flex-col gap-3 lg:gap-5">
         <div className="flex items-center justify-between gap-3">
           <Link
@@ -544,6 +551,13 @@ export default function Dashboard() {
   const [toast, setToast] = useState('')
   const toastTimer = useRef(null)
   const navLockRef = useRef(0)
+  const [railHidden, setRailHidden] = useState(() => {
+    try {
+      return localStorage.getItem('focusflow-rail-hidden') === '1'
+    } catch {
+      return false
+    }
+  })
 
   const [addOpen, setAddOpen] = useState(false)
   const [form, setForm] = useState({ title: '', time: '16:00', duration: '45', type: 'focus' })
@@ -602,6 +616,14 @@ export default function Dashboard() {
   useEffect(() => {
     saveBoard(board, today)
   }, [board, today])
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('focusflow-rail-hidden', railHidden ? '1' : '0')
+    } catch {
+      // Preference only; ignore unavailable storage.
+    }
+  }, [railHidden])
 
   useEffect(() => () => clearTimeout(toastTimer.current), [])
 
@@ -936,7 +958,12 @@ export default function Dashboard() {
         <div className="ffd-grid-bg absolute inset-0" />
       </div>
 
-      <div className="relative mx-auto w-full max-w-[1320px] px-4 py-6 sm:px-6 lg:grid lg:grid-cols-[200px_minmax(0,1fr)] lg:items-start lg:gap-8 lg:px-8 lg:py-8">
+      <div
+        className={cx(
+          'relative mx-auto w-full max-w-[1320px] px-4 py-6 sm:px-6 lg:grid lg:items-start lg:gap-8 lg:px-8 lg:py-8',
+          railHidden ? 'lg:grid-cols-1' : 'lg:grid-cols-[200px_minmax(0,1fr)]',
+        )}
+      >
         <DashboardRail
           active={active}
           onNav={handleNav}
@@ -944,6 +971,7 @@ export default function Dashboard() {
           user={user}
           theme={theme}
           onTheme={setTheme}
+          railHidden={railHidden}
           onLogout={() => {
             logout()
             navigate('/login', { replace: true })
@@ -951,6 +979,20 @@ export default function Dashboard() {
         />
 
         <main className="ff-main mt-5 min-w-0 lg:mt-0">
+          {railHidden && (
+            <div className="mb-5 hidden lg:block">
+              <Link
+                to="/"
+                className="inline-flex items-center gap-2.5"
+                aria-label="FocusFlow home"
+              >
+                <BrandMark />
+                <span className="font-grotesk text-[1.05rem] font-bold tracking-[-0.02em] text-ink">
+                  Focus<span className="text-amber">Flow</span>
+                </span>
+              </Link>
+            </div>
+          )}
           <div className="ff-top flex flex-wrap items-end justify-between gap-x-6 gap-y-4">
             <div className="min-w-0">
               <SectionLabel className="text-amber/85">{fmtLongDate(today)}</SectionLabel>
@@ -962,6 +1004,20 @@ export default function Dashboard() {
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-2 pb-1">
+              <span className="hidden lg:inline-flex">
+                <button
+                  type="button"
+                  onClick={() => setRailHidden((hidden) => !hidden)}
+                  aria-expanded={!railHidden}
+                  aria-controls="ff-dashboard-rail"
+                  aria-label={railHidden ? 'Show navigation' : 'Hide navigation'}
+                  title={railHidden ? 'Show navigation' : 'Hide navigation'}
+                  className={cx(BTN, 'ff-btn')}
+                >
+                  <SidebarIcon className="h-3.5 w-3.5" />
+                  <span className="hidden xl:inline">{railHidden ? 'Show nav' : 'Hide nav'}</span>
+                </button>
+              </span>
               <button type="button" onClick={replan} className={cx(BTN, 'ff-btn')}>
                 <SparkIcon className="h-3.5 w-3.5" />
                 Re-plan my week

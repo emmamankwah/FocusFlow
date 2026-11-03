@@ -224,6 +224,24 @@ export function MenuIcon({ open = false, className = '' }) {
   )
 }
 
+export function SidebarIcon({ className = '' }) {
+  return (
+    <svg
+      viewBox="0 0 16 16"
+      aria-hidden="true"
+      className={className}
+      fill="none"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="1.6"
+    >
+      <rect x="2" y="3" width="12" height="10" rx="1.6" />
+      <path d="M6 3v10" />
+    </svg>
+  )
+}
+
 export function CalendarIcon({ className = '' }) {
   return (
     <svg
