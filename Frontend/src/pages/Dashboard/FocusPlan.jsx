@@ -44,7 +44,7 @@ export function FocusSection({
       <div className="relative grid gap-5 lg:grid-cols-[minmax(0,1fr)_168px] lg:items-center">
         <div className="min-w-0">
           <SectionLabel className="text-amber/85">
-            {heroTask ? `Focus block · ${heroTask.t} · ${heroTask.dur} min` : 'Focus'}
+            {heroTask ? `Focus block · ${heroTask.t} · ${heroTask.dur} min planned` : 'Focus'}
           </SectionLabel>
           <h2 className="mt-2 font-grotesk text-[1.3rem] leading-tight font-bold tracking-[-0.02em] text-ink sm:text-[1.45rem]">
             {heroTask ? heroTask.title : 'No focus blocks left today'}
@@ -52,6 +52,7 @@ export function FocusSection({
           <p className="mt-2 max-w-xl text-[0.83rem] leading-relaxed text-dim">{sub}</p>
 
           <div className="mt-4 flex flex-wrap items-center gap-2">
+            <SectionLabel>Session</SectionLabel>
             {[25, 45, 60].map((mins) => (
               <button
                 key={mins}
@@ -298,7 +299,7 @@ export function PlanSection({
                 id="ffd-task-dur"
                 value={form.duration}
                 onChange={(e) => onFormChange('duration', e.target.value)}
-                className={cx(FIELD, '[color-scheme:dark]')}
+                className={FIELD}
               >
                 <option value="25">25 min</option>
                 <option value="45">45 min</option>
@@ -316,7 +317,7 @@ export function PlanSection({
                 id="ffd-task-type"
                 value={form.type}
                 onChange={(e) => onFormChange('type', e.target.value)}
-                className={cx(FIELD, '[color-scheme:dark]')}
+                className={FIELD}
               >
                 <option value="focus">Focus</option>
                 <option value="class">Class</option>

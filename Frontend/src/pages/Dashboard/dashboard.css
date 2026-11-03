@@ -89,10 +89,6 @@
   }
 }
 
-.ffd-addform input[type='time'] {
-  color-scheme: light;
-}
-
 .ffd-toast {
   transition:
     opacity 0.2s ease,

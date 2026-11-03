@@ -147,10 +147,17 @@ export function makeSuggestions(date = new Date()) {
   return [
     {
       id: 's1',
-      h: `Add a 90 min block on ${fmtDate(addDays(date, 1))} at 10:00 for the CHEM 230 lab report`,
+      h: 'Add a 90 min block today at 17:30 for the CHEM 230 lab report',
       p: 'Lowers the deadline risk from 71% to about 38%.',
       yes: 'Add to my plan',
-      ok: 'Block added. Lab report risk is now about 38%.',
+      ok: 'Block added to today’s plan. Lab report risk is now about 38%.',
+      block: {
+        t: '17:30',
+        dur: 90,
+        title: 'CHEM 230 lab report: extra block',
+        meta: 'Added from AI suggestion',
+        type: 'focus',
+      },
     },
     {
       id: 's2',

@@ -87,16 +87,18 @@ function StatCell({ label, value, unit, note, meter, valueClass = '' }) {
   )
 }
 
-function StatStrip({ focusHours, focusPct, doneCount, totalCount, planPct, productivity, score, risk }) {
+function StatStrip({ focusHours, focusPct, doneCount, totalCount, planPct, productivity, risk }) {
   const status =
     productivity >= 80
       ? 'On track'
       : productivity >= 65
         ? 'Steady'
         : productivity >= 50
-          ? 'Needs focus'
-          : 'Needs rest'
+          ? 'Building'
+          : 'Warming up'
   const remaining = totalCount - doneCount
+  const productivityNote =
+    focusHours === 0 ? 'Baseline · no focus logged yet' : `${status} · ${remaining} block${remaining === 1 ? '' : 's'} left`
 
   return (
     <section
@@ -123,12 +125,12 @@ function StatStrip({ focusHours, focusPct, doneCount, totalCount, planPct, produ
         value={productivity}
         unit="/ 100"
         meter={productivity}
-        note={`${status} · Burnout ${score}`}
+        note={productivityNote}
       />
       <StatCell
         label="Next deadline"
-        value={risk.n}
-        valueClass="text-[0.95rem] leading-tight"
+        value={risk.off <= 0 ? 'Today' : risk.off}
+        unit={risk.off <= 0 ? '' : risk.off === 1 ? 'day left' : 'days left'}
         note={
           <span className="inline-flex flex-wrap items-center gap-x-2 gap-y-1">
             <span
@@ -140,7 +142,7 @@ function StatStrip({ focusHours, focusPct, doneCount, totalCount, planPct, produ
               {risk.label}
             </span>
             <span className="font-mono text-[0.62rem]">
-              {risk.due} · {risk.p}%
+              {risk.n} · {risk.p}%
             </span>
           </span>
         }
@@ -297,7 +299,11 @@ function WorkInboxSection({ queue, tasks, onPost, onSchedule, onRemove }) {
 
       <div className="mt-4 space-y-2">
         <div className="font-mono text-[0.58rem] tracking-[0.14em] text-dim uppercase">Inbox</div>
-        {incoming.length === 0 && <p className="text-[0.8rem] text-dim">Nothing posted yet.</p>}
+        {incoming.length === 0 && (
+          <p className="text-[0.8rem] text-dim">
+            Post work and FocusFlow will suggest a slot for it.
+          </p>
+        )}
         {incoming.map((item) => {
           const time = suggestTime(existingTimes)
           return (
@@ -604,9 +610,13 @@ export default function Dashboard() {
   }, [remainSec])
 
   useEffect(() => {
-    if (!addOpen) return
+    if (!addOpen) return undefined
     setFormError('')
-    titleRef.current?.focus()
+    planRef.current?.scrollIntoView({
+      behavior: prefersReducedMotion() ? 'auto' : 'smooth',
+      block: 'center',
+    })
+    titleRef.current?.focus({ preventScroll: true })
   }, [addOpen])
 
   useEffect(() => {
@@ -726,13 +736,16 @@ export default function Dashboard() {
     setBoard((prev) => {
       const done = { ...prev.done }
       const timed = { ...prev.timed }
+      const sugs = { ...prev.sugs }
       delete done[taskId]
       delete timed[taskId]
+      if (taskId.startsWith('sugg-')) delete sugs[taskId.slice(5)]
       return {
         ...prev,
         custom: prev.custom.filter((task) => task.id !== taskId),
         done,
         timed,
+        sugs,
       }
     })
     showToast('Task removed from today’s plan.')
@@ -780,10 +793,16 @@ export default function Dashboard() {
 
   function handleSuggestion(id, decision) {
     const item = suggestions.find((suggestion) => suggestion.id === id)
-    setBoard((prev) => ({
-      ...prev,
-      sugs: { ...prev.sugs, [id]: decision },
-    }))
+    setBoard((prev) => {
+      const next = { ...prev, sugs: { ...prev.sugs, [id]: decision } }
+      if (decision === 'done' && item?.block) {
+        const taskId = `sugg-${id}`
+        if (!prev.custom.some((task) => task.id === taskId)) {
+          next.custom = [...prev.custom, { id: taskId, ...item.block, custom: true }]
+        }
+      }
+      return next
+    })
     showToast(
       decision === 'done'
         ? item?.ok || 'Added to your plan.'
@@ -954,7 +973,7 @@ export default function Dashboard() {
                 aria-expanded={addOpen}
                 aria-controls="ff-addform"
               >
-                Add task
+                {addOpen ? 'Close' : 'Add task'}
               </button>
             </div>
           </div>
@@ -967,18 +986,7 @@ export default function Dashboard() {
               totalCount={allTasks.length}
               planPct={planPct}
               productivity={productivity}
-              score={score}
               risk={risks[0]}
-            />
-          </div>
-
-          <div className="mt-5">
-            <WorkInboxSection
-              queue={board.workQueue || []}
-              tasks={allTasks}
-              onPost={handlePostWork}
-              onSchedule={handleScheduleWork}
-              onRemove={handleRemoveWork}
             />
           </div>
 
@@ -1010,6 +1018,13 @@ export default function Dashboard() {
             </div>
 
             <div className="space-y-5">
+              <WorkInboxSection
+                queue={board.workQueue || []}
+                tasks={allTasks}
+                onPost={handlePostWork}
+                onSchedule={handleScheduleWork}
+                onRemove={handleRemoveWork}
+              />
               <SuggestionsSection
                 suggestions={suggestions}
                 sugs={board.sugs}
@@ -1044,8 +1059,8 @@ export default function Dashboard() {
           </div>
 
           <footer className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-line/60 pt-4 font-mono text-[0.58rem] tracking-[0.1em] text-dim uppercase">
-            <span>FocusFlow · Local dashboard demo</span>
-            <span>All changes stay in this browser</span>
+            <span>FocusFlow · Preview build</span>
+            <span>Changes are saved on this device</span>
           </footer>
         </main>
       </div>
