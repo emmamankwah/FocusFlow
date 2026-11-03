@@ -979,6 +979,20 @@ export default function Dashboard() {
         />
 
         <main className="ff-main mt-5 min-w-0 lg:mt-0">
+          <div className="mb-4 hidden items-center gap-3 lg:flex">
+            <button
+              type="button"
+              onClick={() => setRailHidden((hidden) => !hidden)}
+              aria-expanded={!railHidden}
+              aria-controls="ff-dashboard-rail"
+              aria-label={railHidden ? 'Show navigation' : 'Hide navigation'}
+              title={railHidden ? 'Show navigation' : 'Hide navigation'}
+              className={cx(BTN, 'ff-btn hidden lg:inline-flex')}
+            >
+              <SidebarIcon className="h-3.5 w-3.5" />
+              <span className="hidden xl:inline">{railHidden ? 'Show nav' : 'Hide nav'}</span>
+            </button>
+          </div>
           {railHidden && (
             <div className="mb-5 hidden lg:block">
               <Link
@@ -1004,20 +1018,6 @@ export default function Dashboard() {
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-2 pb-1">
-              <span className="hidden lg:inline-flex">
-                <button
-                  type="button"
-                  onClick={() => setRailHidden((hidden) => !hidden)}
-                  aria-expanded={!railHidden}
-                  aria-controls="ff-dashboard-rail"
-                  aria-label={railHidden ? 'Show navigation' : 'Hide navigation'}
-                  title={railHidden ? 'Show navigation' : 'Hide navigation'}
-                  className={cx(BTN, 'ff-btn')}
-                >
-                  <SidebarIcon className="h-3.5 w-3.5" />
-                  <span className="hidden xl:inline">{railHidden ? 'Show nav' : 'Hide nav'}</span>
-                </button>
-              </span>
               <button type="button" onClick={replan} className={cx(BTN, 'ff-btn')}>
                 <SparkIcon className="h-3.5 w-3.5" />
                 Re-plan my week
