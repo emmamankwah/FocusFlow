@@ -75,9 +75,8 @@ def save_pending_user(first_name, last_name, email, username, hash_password):
     connection = _connect()
     try:
         with connection.cursor() as cursor:
-            # One pending row per email: re-staging replaces the old one
-            # instead of failing on a unique constraint.
-            cursor.execute("DELETE FROM pending_users WHERE email = %s", (email,),)
+            # One pending row per email; the service refuses re-staging while a
+            # pending row exists, so this is a plain insert.
             cursor.execute(
                 """
                 INSERT INTO pending_users (first_name, last_name, email, username, password)

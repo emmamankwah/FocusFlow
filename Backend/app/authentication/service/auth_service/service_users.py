@@ -186,7 +186,12 @@ def register_user(user_data: UserRegister) -> Dict[str, str]:
         return {"error": "Username already taken."}
 
     if get_pending_user(email):
-        delete_pending_user(email)
+        # A registration is already in flight for this email; never overwrite
+        # the staged row, or an arriving OTP could promote attacker-chosen data.
+        return {
+            "message": "A verification is already in progress for this email. "
+                       "Wait for it to expire or use the resend flow.",
+        }
         
     save_pending_user(
         user_data.firstName,
