@@ -1,4 +1,9 @@
-"""Local sentence embeddings backed by sentence-transformers.
+"""Local text embeddings backed by fastembed (ONNX Runtime).
+
+fastembed is used instead of sentence-transformers/PyTorch because PyTorch's
+Windows DLLs are unsigned and are blocked by Smart App Control (WinError 4551)
+on some machines. The configured model is the ONNX build of the same MiniLM
+model, so the vector dimension (384) is unchanged.
 
 The model is loaded lazily on first use so importing the package (and running
 the API without touching RAG) stays cheap. Tests can replace the encoder with
@@ -9,6 +14,7 @@ from __future__ import annotations
 
 import threading
 from collections.abc import Callable, Sequence
+from pathlib import Path
 
 from . import config
 
@@ -26,18 +32,24 @@ def set_encoder(
     _encoder_override = encoder
 
 
+def _cache_dir() -> str:
+    path = Path(config.EMBEDDING_CACHE)
+    path.mkdir(parents=True, exist_ok=True)
+    return str(path)
+
+
 def load_model():
     global _model
     if _model is None:
         with _load_lock:
             if _model is None:
-                from sentence_transformers import SentenceTransformer
+                from fastembed import TextEmbedding
 
-                model = SentenceTransformer(
-                    config.EMBEDDING_MODEL,
-                    device=config.EMBEDDING_DEVICE,
+                model = TextEmbedding(
+                    model_name=config.EMBEDDING_MODEL,
+                    cache_dir=_cache_dir(),
                 )
-                dimension = model.get_sentence_embedding_dimension()
+                dimension = len(next(iter(model.embed(["dimension check"]))))
                 if dimension != config.EMBEDDING_DIM:
                     raise RuntimeError(
                         "Embedding dimension mismatch: model reports "
@@ -56,12 +68,8 @@ def embed_texts(texts: Sequence[str]) -> list[list[float]]:
 
     model = load_model()
     with _encode_lock:
-        vectors = model.encode(
-            list(texts),
-            batch_size=config.EMBEDDING_BATCH,
-            normalize_embeddings=True,
-            convert_to_numpy=True,
-            show_progress_bar=False,
+        vectors = list(
+            model.embed(list(texts), batch_size=config.EMBEDDING_BATCH)
         )
     return [vector.tolist() for vector in vectors]
 

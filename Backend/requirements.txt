@@ -10,7 +10,7 @@ python-jose[cryptography]
 passlib[argon2]
 psycopg2-binary
 pydantic[email]
-sentence-transformers
+fastembed
 pypdf
 python-docx
 python-multipart

@@ -28,8 +28,11 @@ EMBEDDING_MODEL = os.getenv(
     "sentence-transformers/all-MiniLM-L6-v2",
 )
 EMBEDDING_DIM = _int("RAG_EMBEDDING_DIM", 384)
-EMBEDDING_DEVICE = os.getenv("RAG_EMBEDDING_DEVICE", "cpu")
 EMBEDDING_BATCH = _int("RAG_EMBEDDING_BATCH", 32)
+EMBEDDING_CACHE = os.getenv(
+    "RAG_EMBEDDING_CACHE",
+    str(Path(__file__).resolve().parents[3] / ".cache" / "fastembed"),
+)
 WARMUP = _bool("RAG_WARMUP", False)
 
 CHUNK_CHARS = _int("RAG_CHUNK_CHARS", 1500)

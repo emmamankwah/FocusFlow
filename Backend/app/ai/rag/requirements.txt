@@ -4,8 +4,7 @@ pydantic
 python-dotenv
 psycopg2-binary
 openai
-sentence-transformers
-torch
+fastembed
 pypdf
 python-docx
 python-multipart
