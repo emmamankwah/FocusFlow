@@ -1,4 +1,6 @@
+import logging
 import os
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -6,9 +8,24 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.ai.chatbot.app import router as ai_router
+from app.ai.rag import config as rag_config
+from app.ai.rag import embeddings as rag_embeddings
+from app.ai.rag.routes.rag import router as rag_router
 from app.authentication.routes.auth.auth_user import router as auth_router
 
 load_dotenv(Path(__file__).resolve().parent / ".env")
+
+logger = logging.getLogger(__name__)
+
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    if rag_config.WARMUP:
+        try:
+            rag_embeddings.warmup()
+        except Exception:
+            logger.exception("RAG embedding warm-up failed")
+    yield
 
 APP_NAME = os.getenv("APP_NAME", "FocusFlow")
 CORS_ORIGINS = [
@@ -20,7 +37,7 @@ CORS_ORIGINS = [
     if origin.strip()
 ]
 
-app = FastAPI(title=APP_NAME)
+app = FastAPI(title=APP_NAME, lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -33,6 +50,7 @@ app.add_middleware(
 
 app.include_router(auth_router)
 app.include_router(ai_router, prefix="/ai")
+app.include_router(rag_router)
 
 
 @app.get("/")

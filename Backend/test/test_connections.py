@@ -42,7 +42,13 @@ try:
             tables = [row['table_name'] for row in cur.fetchall()]
             print(f"  Public Tables Found ({len(tables)}): {', '.join(tables) if tables else 'None'}")
             
-            expected_tables = ["users", "pending_users", "otp_table"]
+            expected_tables = [
+                "users",
+                "pending_users",
+                "otp_table",
+                "documents",
+                "document_chunks",
+            ]
             for table in expected_tables:
                 if table in tables:
                     cur.execute(f"SELECT COUNT(*) as count FROM {table};")
