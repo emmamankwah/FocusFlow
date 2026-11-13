@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from . import chunking, config, embeddings, loaders, vector_store
+from . import chunking, cleaning, config, embeddings, loaders, vector_store
 
 
 class IngestError(Exception):
@@ -48,7 +48,7 @@ def ingest_text(
     content_type: str | None = None,
     size_bytes: int | None = None,
 ) -> dict:
-    text = (text or "").strip()
+    text = cleaning.clean_text(text)
     if not text:
         raise IngestError("The document has no extractable text.")
 

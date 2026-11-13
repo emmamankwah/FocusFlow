@@ -6,7 +6,7 @@ from pathlib import Path
 backend_dir = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(backend_dir))
 
-from app.ai.rag import chunking, embeddings, loaders, pipeline
+from app.ai.rag import chunking, cleaning, embeddings, loaders, pipeline
 
 
 class ChunkingTests(unittest.TestCase):
@@ -31,6 +31,27 @@ class ChunkingTests(unittest.TestCase):
     def test_long_text_advances(self):
         chunks = chunking.chunk_text("word " * 400, size=200, overlap=40)
         self.assertGreater(len(chunks), 1)
+
+
+class CleaningTests(unittest.TestCase):
+    def test_strips_trailing_whitespace(self):
+        self.assertEqual(cleaning.clean_text("hello   \nworld\t\n"), "hello\nworld")
+
+    def test_removes_hidden_and_control_symbols(self):
+        self.assertEqual(
+            cleaning.clean_text("a\u200bb\x00c\ufffdd"),
+            "abcd",
+        )
+
+    def test_collapses_spacing_and_blank_lines(self):
+        self.assertEqual(
+            cleaning.clean_text("a \t b\n\n\n\nc"),
+            "a b\n\nc",
+        )
+
+    def test_empty_input(self):
+        self.assertEqual(cleaning.clean_text(None), "")
+        self.assertEqual(cleaning.clean_text("   \n "), "")
 
 
 class LoaderTests(unittest.TestCase):
