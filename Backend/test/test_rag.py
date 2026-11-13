@@ -7,7 +7,7 @@ from unittest import mock
 backend_dir = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(backend_dir))
 
-from app.ai.rag import chunking, cleaning, embeddings, extract, loaders, pipeline
+from app.ai.rag import boilerplate, chunking, cleaning, embeddings, extract, loaders, pipeline
 
 
 class ChunkingTests(unittest.TestCase):
@@ -78,6 +78,36 @@ class ExtractionTests(unittest.TestCase):
             )
 
         pdf_reader.assert_called_once()
+
+
+class BoilerplateTests(unittest.TestCase):
+    def test_removes_page_numbers(self):
+        self.assertEqual(
+            boilerplate.remove_boilerplate("Body text\nPage 3\nMore text"),
+            "Body text\nMore text",
+        )
+
+    def test_removes_repeated_header(self):
+        text = "ACME Corp\nfirst\nACME Corp\nsecond\nACME Corp\nthird"
+        self.assertEqual(
+            boilerplate.remove_boilerplate(text),
+            "first\nsecond\nthird",
+        )
+
+    def test_removes_known_notices(self):
+        self.assertEqual(
+            boilerplate.remove_boilerplate("Hello\nAll rights reserved."),
+            "Hello",
+        )
+
+    def test_keeps_unique_short_lines(self):
+        self.assertEqual(
+            boilerplate.remove_boilerplate("Title\nOne\nTwo"),
+            "Title\nOne\nTwo",
+        )
+
+    def test_empty_input(self):
+        self.assertEqual(boilerplate.remove_boilerplate(""), "")
 
 
 class LoaderTests(unittest.TestCase):

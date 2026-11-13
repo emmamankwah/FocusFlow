@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from . import chunking, cleaning, config, embeddings, extract, vector_store
+from . import boilerplate, chunking, cleaning, config, embeddings, extract, vector_store
 
 
 class IngestError(Exception):
@@ -49,6 +49,7 @@ def ingest_text(
     size_bytes: int | None = None,
 ) -> dict:
     text = cleaning.clean_text(text)
+    text = boilerplate.remove_boilerplate(text)
     if not text:
         raise IngestError("The document has no extractable text.")
 
