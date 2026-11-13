@@ -1,12 +1,13 @@
 import sys
 import unittest
 from pathlib import Path
+from unittest import mock
 
 # Add Backend directory to sys.path
 backend_dir = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(backend_dir))
 
-from app.ai.rag import chunking, cleaning, embeddings, loaders, pipeline
+from app.ai.rag import chunking, cleaning, embeddings, extract, loaders, pipeline
 
 
 class ChunkingTests(unittest.TestCase):
@@ -52,6 +53,31 @@ class CleaningTests(unittest.TestCase):
     def test_empty_input(self):
         self.assertEqual(cleaning.clean_text(None), "")
         self.assertEqual(cleaning.clean_text("   \n "), "")
+
+
+class ExtractionTests(unittest.TestCase):
+    def test_extracts_raw_text(self):
+        self.assertEqual(
+            extract.extract_text("notes.txt", "text/plain", b"hello   \nworld\x00"),
+            "hello   \nworld\x00",
+        )
+
+    def test_rejects_unsupported_type(self):
+        with self.assertRaises(extract.UnsupportedDocument):
+            extract.extract_text("archive.zip", "application/zip", b"PK\x03\x04")
+
+    def test_pdf_uses_pdf_reader(self):
+        page = mock.Mock()
+        page.extract_text.return_value = "pdf text"
+        reader = mock.Mock(pages=[page])
+
+        with mock.patch.object(extract, "PdfReader", return_value=reader) as pdf_reader:
+            self.assertEqual(
+                extract.extract_text("report.pdf", "application/pdf", b"%PDF-1.4"),
+                "pdf text",
+            )
+
+        pdf_reader.assert_called_once()
 
 
 class LoaderTests(unittest.TestCase):

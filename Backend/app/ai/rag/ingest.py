@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from . import chunking, cleaning, config, embeddings, loaders, vector_store
+from . import chunking, cleaning, config, embeddings, extract, vector_store
 
 
 class IngestError(Exception):
@@ -26,8 +26,8 @@ def ingest_file(
         raise IngestError(f"File is larger than {config.MAX_UPLOAD_MB} MB.")
 
     try:
-        text = loaders.extract_text(filename, content_type, data)
-    except loaders.UnsupportedDocument as exc:
+        text = extract.extract_text(filename, content_type, data)
+    except extract.UnsupportedDocument as exc:
         raise IngestError(str(exc)) from exc
 
     return ingest_text(
