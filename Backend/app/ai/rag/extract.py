@@ -1,5 +1,5 @@
 
-"""Extract text from documents and images."""
+"""Extract text from PDF, Word, text, and image files."""
 
 import io
 from pathlib import Path
@@ -12,7 +12,7 @@ from . import loaders
 
 
 def extract_pdf(data):
-    """Extract text from PDF files."""
+    """Extract text from a PDF."""
 
     reader = PdfReader(io.BytesIO(data))
 
@@ -23,7 +23,7 @@ def extract_pdf(data):
 
 
 def extract_image(data):
-    """Extract text from images using OCR."""
+    """Extract text from an image using OCR."""
 
     image = Image.open(io.BytesIO(data))
 
@@ -31,7 +31,7 @@ def extract_image(data):
 
 
 def extract_text(filename, content_type, data):
-    """Identify file type and extract its text."""
+    """Extract text based on file type."""
 
     extension = Path(filename or "").suffix.lower()
 
