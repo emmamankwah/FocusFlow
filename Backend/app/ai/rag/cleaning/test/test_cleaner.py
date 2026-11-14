@@ -71,6 +71,33 @@ class TestDocumentCleaning(unittest.TestCase):
             "Deep learning is a subset of machine learning."
         )
 
+    def test_preserves_bullet_lists(self):
+
+        text = "- first item\n- second item"
+
+        result = reconstruct_paragraphs(text)
+
+        self.assertEqual(result, text)
+
+    def test_preserves_headings_and_joins_body(self):
+
+        text = "# Heading\nwrapped body\ncontinues here."
+
+        result = reconstruct_paragraphs(text)
+
+        self.assertEqual(
+            result,
+            "# Heading\nwrapped body continues here."
+        )
+
+    def test_preserves_code_fences(self):
+
+        text = "```\nline one\nline two\n```"
+
+        result = reconstruct_paragraphs(text)
+
+        self.assertEqual(result, text)
+
     def test_repeated_headers(self):
 
         text = "\n".join(

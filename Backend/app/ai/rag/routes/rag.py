@@ -9,7 +9,7 @@ from fastapi import APIRouter, Depends, File, Form, UploadFile
 
 from app.authentication.security.current_user import get_current_user_id
 
-from .. import ingest, pipeline, vector_store
+from .. import config, ingest, pipeline, vector_store
 from ..schemas import InlineDocument, RagQuery
 
 router = APIRouter(prefix="/ai", tags=["rag"])
@@ -39,7 +39,10 @@ def upload_document(
 ):
     # Sync def: Starlette runs it in a threadpool, so the CPU-bound embedding
     # call does not block the event loop.
-    data = file.file.read()
+    limit = ingest.max_upload_bytes()
+    data = file.file.read(limit + 1)
+    if len(data) > limit:
+        return {"error": f"File is larger than {config.MAX_UPLOAD_MB} MB."}
     filename = file.filename or "document"
     resolved_title = (title or Path(filename).stem or "Untitled document").strip()[:200]
 

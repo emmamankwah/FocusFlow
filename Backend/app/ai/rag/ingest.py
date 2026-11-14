@@ -16,6 +16,10 @@ class IngestError(Exception):
         super().__init__(message)
 
 
+def max_upload_bytes() -> int:
+    return config.MAX_UPLOAD_MB * 1024 * 1024
+
+
 def ingest_file(
     user_id: int,
     title: str,
@@ -24,7 +28,7 @@ def ingest_file(
     data: bytes,
 ) -> dict:
     size = len(data)
-    limit = config.MAX_UPLOAD_MB * 1024 * 1024
+    limit = max_upload_bytes()
     if size > limit:
         raise IngestError(f"File is larger than {config.MAX_UPLOAD_MB} MB.")
 
@@ -33,9 +37,6 @@ def ingest_file(
     except extract.UnsupportedDocument as exc:
         raise IngestError(str(exc)) from exc
 
-    if Path(filename or "").suffix.lower() in {".pdf", ".docx"}:
-        text = cleaning.reconstruct_paragraphs(text)
-
     return ingest_text(
         user_id,
         title,
@@ -43,6 +44,7 @@ def ingest_file(
         filename=filename,
         content_type=content_type,
         size_bytes=size,
+        reconstruct=Path(filename or "").suffix.lower() in {".pdf", ".docx"},
     )
 
 
@@ -53,9 +55,12 @@ def ingest_text(
     filename: str | None = None,
     content_type: str | None = None,
     size_bytes: int | None = None,
+    reconstruct: bool = False,
 ) -> dict:
     text = cleaning.clean_text(text)
     text = boilerplate.remove_boilerplate(text)
+    if reconstruct:
+        text = cleaning.reconstruct_paragraphs(text)
     if not text:
         raise IngestError("The document has no extractable text.")
 
@@ -83,8 +88,7 @@ def ingest_text(
             for index, (piece, vector) in enumerate(zip(pieces, vectors))
         ]
 
-        vector_store.insert_chunks(document["id"], user_id, chunks)
-        vector_store.set_document_status(document["id"], user_id, "ready")
+        vector_store.store_document_chunks(document["id"], user_id, chunks)
     except Exception as exc:
         try:
             vector_store.set_document_status(

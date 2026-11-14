@@ -1,14 +1,17 @@
+import io
 import sys
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
 from unittest import mock
 
 # Add Backend directory to sys.path
 backend_dir = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(backend_dir))
 
-from app.ai.rag import chunking, cleaning, embeddings, extract, loaders, pipeline
+from app.ai.rag import chunking, cleaning, embeddings, extract, loaders, pipeline, retriever
 from app.ai.rag.cleaning import boilerplate
+from app.ai.rag.routes import rag as rag_routes
 
 
 class ChunkingTests(unittest.TestCase):
@@ -167,6 +170,123 @@ class PipelineTests(unittest.TestCase):
         )
         self.assertLessEqual(len(context), 150)
         self.assertNotIn("[2]", context)
+
+
+class RetrieverTests(unittest.TestCase):
+    def test_maps_rows(self):
+        rows = [
+            {
+                "document_id": 3,
+                "title": "Doc",
+                "chunk_index": 2,
+                "content": "passage",
+                "score": 0.87,
+            }
+        ]
+
+        with mock.patch.object(
+            retriever.embeddings, "embed_query", return_value=[0.1, 0.2]
+        ) as embed, mock.patch.object(
+            retriever.embeddings, "vector_to_sql", return_value="[0.1,0.2]"
+        ), mock.patch.object(
+            retriever.vector_store, "search_chunks", return_value=rows
+        ) as search:
+            result = retriever.retrieve(5, "question", top_k=3, document_ids=[3])
+
+        embed.assert_called_once_with("question")
+        search.assert_called_once_with(
+            user_id=5,
+            query_vector="[0.1,0.2]",
+            top_k=3,
+            document_ids=[3],
+        )
+        self.assertEqual(
+            result,
+            [
+                {
+                    "documentId": 3,
+                    "title": "Doc",
+                    "chunkIndex": 2,
+                    "content": "passage",
+                    "score": 0.87,
+                }
+            ],
+        )
+
+
+class PipelineAnswerTests(unittest.TestCase):
+    def test_returns_sources(self):
+        chunks = [
+            {
+                "documentId": 1,
+                "title": "Doc",
+                "chunkIndex": 0,
+                "content": "alpha",
+                "score": 0.9,
+            }
+        ]
+
+        with mock.patch(
+            "app.ai.rag.retriever.retrieve", return_value=chunks
+        ), mock.patch(
+            "app.ai.chatbot.chat_service.get_reply", return_value="answer"
+        ):
+            result = pipeline.answer(1, "question", top_k=2)
+
+        self.assertEqual(result["reply"], "answer")
+        self.assertEqual(result["sources"][0]["snippet"], "alpha")
+        self.assertEqual(result["sources"][0]["score"], 0.9)
+
+    def test_returns_no_answer_without_chunks(self):
+        with mock.patch("app.ai.rag.retriever.retrieve", return_value=[]):
+            result = pipeline.answer(1, "question")
+
+        self.assertEqual(result["sources"], [])
+        self.assertEqual(result["reply"], pipeline.NO_ANSWER)
+
+
+class BoundedBytesIO(io.BytesIO):
+    def read(self, size=-1):
+        if size is None or size < 0:
+            raise AssertionError("upload was read without a size limit")
+        return super().read(size)
+
+
+class DocumentUploadTests(unittest.TestCase):
+    def test_rejects_oversized_upload(self):
+        upload = SimpleNamespace(
+            file=BoundedBytesIO(b"12345"),
+            filename="big.txt",
+            content_type="text/plain",
+        )
+
+        with mock.patch.object(
+            rag_routes.ingest, "max_upload_bytes", return_value=4
+        ):
+            result = rag_routes.upload_document(upload, title=None, user_id=1)
+
+        self.assertIn("error", result)
+
+    def test_passes_bounded_data_to_ingest(self):
+        upload = SimpleNamespace(
+            file=BoundedBytesIO(b"1234"),
+            filename="small.txt",
+            content_type="text/plain",
+        )
+
+        with mock.patch.object(
+            rag_routes.ingest, "max_upload_bytes", return_value=10
+        ), mock.patch.object(
+            rag_routes.ingest,
+            "ingest_file",
+            return_value={"id": 1, "title": "Small", "status": "ready"},
+        ) as ingest_file:
+            result = rag_routes.upload_document(upload, title="Small", user_id=1)
+
+        ingest_file.assert_called_once_with(
+            1, "Small", "small.txt", "text/plain", b"1234"
+        )
+        self.assertEqual(result["id"], 1)
 
 
 if __name__ == "__main__":

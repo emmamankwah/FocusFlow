@@ -41,7 +41,11 @@ def create_document(
         connection.close()
 
 
-def insert_chunks(document_id: int, user_id: int, chunks: list[dict]) -> None:
+def store_document_chunks(
+    document_id: int,
+    user_id: int,
+    chunks: list[dict],
+) -> None:
     if not chunks:
         return
 
@@ -65,6 +69,11 @@ def insert_chunks(document_id: int, user_id: int, chunks: list[dict]) -> None:
                     )
                     for chunk in chunks
                 ],
+            )
+            cursor.execute(
+                "UPDATE documents SET status = 'ready', error = NULL, "
+                "updated_at = now() WHERE id = %s AND user_id = %s",
+                (document_id, user_id),
             )
         connection.commit()
     except Exception:
@@ -165,6 +174,7 @@ def search_chunks(
                 "FROM document_chunks c "
                 "JOIN documents d ON d.id = c.document_id "
                 "WHERE c.user_id = %s "
+                "AND d.status = 'ready' "
                 "AND (%s::bigint[] IS NULL OR c.document_id = ANY(%s::bigint[])) "
                 "ORDER BY c.embedding <=> %s::vector "
                 "LIMIT %s",

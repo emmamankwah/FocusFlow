@@ -14,3 +14,6 @@ fastembed
 pypdf
 python-docx
 python-multipart
+# OCR requires the Tesseract binary installed on the host.
+pytesseract
+Pillow
