@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
-from . import boilerplate, chunking, cleaning, config, embeddings, extract, vector_store
+from pathlib import Path
+
+from . import chunking, cleaning, config, embeddings, extract, vector_store
+from .cleaning import boilerplate
 
 
 class IngestError(Exception):
@@ -29,6 +32,9 @@ def ingest_file(
         text = extract.extract_text(filename, content_type, data)
     except extract.UnsupportedDocument as exc:
         raise IngestError(str(exc)) from exc
+
+    if Path(filename or "").suffix.lower() in {".pdf", ".docx"}:
+        text = cleaning.reconstruct_paragraphs(text)
 
     return ingest_text(
         user_id,

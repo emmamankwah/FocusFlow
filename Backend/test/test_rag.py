@@ -7,7 +7,8 @@ from unittest import mock
 backend_dir = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(backend_dir))
 
-from app.ai.rag import boilerplate, chunking, cleaning, embeddings, extract, loaders, pipeline
+from app.ai.rag import chunking, cleaning, embeddings, extract, loaders, pipeline
+from app.ai.rag.cleaning import boilerplate
 
 
 class ChunkingTests(unittest.TestCase):
@@ -71,7 +72,7 @@ class ExtractionTests(unittest.TestCase):
         page.extract_text.return_value = "pdf text"
         reader = mock.Mock(pages=[page])
 
-        with mock.patch.object(extract, "PdfReader", return_value=reader) as pdf_reader:
+        with mock.patch("pypdf.PdfReader", return_value=reader) as pdf_reader:
             self.assertEqual(
                 extract.extract_text("report.pdf", "application/pdf", b"%PDF-1.4"),
                 "pdf text",

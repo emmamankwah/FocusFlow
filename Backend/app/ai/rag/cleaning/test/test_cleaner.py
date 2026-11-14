@@ -1,11 +1,18 @@
+import sys
 import unittest
+from pathlib import Path
 
-from cleaners.character_cleaner import clean_characters
-from cleaners.unicode_cleaner import normalize_unicode
-from cleaners.whitespace_cleaner import clean_whitespace
-from cleaners.dehyphenation import dehyphenate
-from cleaners.structure_cleaner import reconstruct_paragraphs
-from cleaners.document_cleaner import remove_repeated_lines
+backend_dir = Path(__file__).resolve().parents[5]
+sys.path.insert(0, str(backend_dir))
+
+from app.ai.rag.cleaning import (
+    clean_characters,
+    clean_whitespace,
+    dehyphenate,
+    normalize_unicode,
+    reconstruct_paragraphs,
+    remove_boilerplate,
+)
 
 
 class TestDocumentCleaning(unittest.TestCase):
@@ -66,19 +73,20 @@ class TestDocumentCleaning(unittest.TestCase):
 
     def test_repeated_headers(self):
 
-        pages = [
-            "UNIVERSITY OF CAPE COAST\nIntroduction",
-            "UNIVERSITY OF CAPE COAST\nChapter One",
-            "UNIVERSITY OF CAPE COAST\nChapter Two"
-        ]
+        text = "\n".join(
+            [
+                "UNIVERSITY OF CAPE COAST\nIntroduction",
+                "UNIVERSITY OF CAPE COAST\nChapter One",
+                "UNIVERSITY OF CAPE COAST\nChapter Two",
+            ]
+        )
 
-        result = remove_repeated_lines(pages)
+        result = remove_boilerplate(text)
 
-        for page in result:
-            self.assertNotIn(
-                "UNIVERSITY OF CAPE COAST",
-                page
-            )
+        self.assertNotIn(
+            "UNIVERSITY OF CAPE COAST",
+            result
+        )
 
 
 if __name__ == "__main__":

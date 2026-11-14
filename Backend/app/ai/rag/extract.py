@@ -1,4 +1,3 @@
-
 """Extract text from PDF, Word, text, and image files."""
 
 import io
@@ -6,20 +5,10 @@ from pathlib import Path
 
 import pytesseract
 from PIL import Image
-from pypdf import PdfReader
 
 from . import loaders
 
-
-def extract_pdf(data):
-    """Extract text from a PDF."""
-
-    reader = PdfReader(io.BytesIO(data))
-
-    return "\n".join(
-        page.extract_text() or ""
-        for page in reader.pages
-    )
+UnsupportedDocument = loaders.UnsupportedDocument
 
 
 def extract_image(data):
@@ -34,9 +23,6 @@ def extract_text(filename, content_type, data):
     """Extract text based on file type."""
 
     extension = Path(filename or "").suffix.lower()
-
-    if extension == ".pdf" or content_type == "application/pdf":
-        return extract_pdf(data)
 
     if extension in [".jpg", ".jpeg", ".png"] or (
         content_type and content_type.startswith("image/")
