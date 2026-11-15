@@ -65,9 +65,13 @@ class UserRegister(PasswordValidation):
     firstName: StrippedStr = Field(min_length=1, max_length=100)
     lastName: StrippedStr = Field(min_length=1, max_length=100)
     email: NormalizedEmail = Field(min_length=1, max_length=255)
-    username: str 
+    username: StrippedStr = Field(
+        min_length=1,
+        max_length=100,
+        pattern=r"^\S+$",
+    )
     password: str
-    confirmPassword: str 
+    confirmPassword: str
 
     @model_validator(mode="after")
     def passwords_match(self) -> "UserRegister":
@@ -107,7 +111,11 @@ class OtpResend(BaseModel):
 class UserProfileUpdate(BaseModel):
     firstName: StrippedStr = Field(min_length=1, max_length=100)
     lastName: StrippedStr = Field(min_length=1, max_length=100)
-    username: str
+    username: StrippedStr = Field(
+        min_length=1,
+        max_length=100,
+        pattern=r"^\S+$",
+    )
     email: NormalizedEmail = Field(min_length=1, max_length=255)
 
 

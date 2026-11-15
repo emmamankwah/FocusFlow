@@ -179,6 +179,11 @@ def register_user(user_data: UserRegister) -> Dict[str, str]:
     email = user_data.email.strip()
     username = user_data.username.strip()
 
+    if not username:
+        return {"error": "Username cannot be empty."}
+    if any(character.isspace() for character in username):
+        return {"error": "Username cannot contain spaces."}
+
     if get_user_by_email(email):
         return {"error": "Email already registered."}
 
