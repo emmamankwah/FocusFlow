@@ -256,6 +256,82 @@ class AuthFlowTests(unittest.TestCase):
             "Username already taken.",
         )
 
+    def test_profile_email_change_updates_login_identity(self):
+        old_email, username = self._verified_user()
+        token = self._login(old_email)["access_token"]
+        headers = {"Authorization": f"Bearer {token}"}
+
+        new_email = _email()
+        self.emails.append(new_email)
+
+        updated = self.client.put(
+            "/auth/profile",
+            headers=headers,
+            json={
+                "firstName": "Ada",
+                "lastName": "Lovelace",
+                "username": username,
+                "email": new_email,
+            },
+        )
+        self.assertEqual(updated.status_code, 200)
+        self.assertEqual(updated.json()["email"], new_email)
+
+        profile = self.client.get("/auth/profile", headers=headers)
+        self.assertEqual(profile.json()["email"], new_email)
+
+        self.assertIn("access_token", self._login(new_email, PASSWORD))
+        self.assertIn("error", self._login(old_email, PASSWORD))
+        self.assertFalse(
+            any(item["email"] == new_email for item in self.sent_otps)
+        )
+
+    def test_profile_email_change_rejects_registered_email(self):
+        email, username = self._verified_user()
+        token = self._login(email)["access_token"]
+
+        other_email = _email()
+        other_username = _username()
+        self.emails.append(other_email)
+        create_user(
+            "Other",
+            "User",
+            other_email,
+            other_username,
+            hash_password(PASSWORD),
+        )
+
+        response = self.client.put(
+            "/auth/profile",
+            headers={"Authorization": f"Bearer {token}"},
+            json={
+                "firstName": "Ada",
+                "lastName": "Lovelace",
+                "username": username,
+                "email": other_email,
+            },
+        )
+        self.assertEqual(response.json().get("error"), "Email already in use.")
+
+    def test_profile_email_change_rejects_pending_email(self):
+        email, username = self._verified_user()
+        token = self._login(email)["access_token"]
+
+        pending_email, _, pending = self._register()
+        self.assertNotIn("error", pending.json())
+
+        response = self.client.put(
+            "/auth/profile",
+            headers={"Authorization": f"Bearer {token}"},
+            json={
+                "firstName": "Ada",
+                "lastName": "Lovelace",
+                "username": username,
+                "email": pending_email,
+            },
+        )
+        self.assertEqual(response.json().get("error"), "Email already in use.")
+
     @unittest.expectedFailure
     def test_register_rejects_username_held_by_pending_registration(self):
         _, username, first = self._register()
