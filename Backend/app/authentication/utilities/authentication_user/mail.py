@@ -29,3 +29,30 @@ def send_verification_email(
 
     if not configure_email(user_email, subject, body):
         raise RuntimeError("Failed to send verification email")
+
+
+def send_email_change_verification(
+    new_email: str, plain_otp: str, expires_minutes: int
+) -> None:
+    """Email the code that must be confirmed before the email is changed."""
+    subject = "Confirm Your New Email Address"
+    body = (
+        f"Your email change verification code is: {plain_otp}.\n"
+        f"It expires in {expires_minutes} minutes.\n"
+        "If you did not request this change, you can ignore this email."
+    )
+
+    if not configure_email(new_email, subject, body):
+        raise RuntimeError("Failed to send email change verification")
+
+
+def send_email_change_notice(old_email: str, new_email: str) -> None:
+    """Tell the previous address that the account email was changed."""
+    subject = "Your Email Address Was Changed"
+    body = (
+        f"The email address for your account was changed to {new_email}.\n"
+        "If you did not make this change, reset your password immediately."
+    )
+
+    if not configure_email(old_email, subject, body):
+        raise RuntimeError("Failed to send email change notice")

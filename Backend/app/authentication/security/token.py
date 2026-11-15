@@ -17,14 +17,17 @@ JWT_EXPIRE_MINUTES = int(os.getenv("JWT_EXPIRE_MINUTES", "60"))
 TOKEN_TYPE = "access"
 
 
-def create_access_token(subject: str) -> str:
+def create_access_token(subject: str, token_version: int = 0) -> str:
     """Return a signed, short-lived access token for ``subject``."""
     if not subject:
         raise ValueError("Token subject cannot be empty.")
+    if not isinstance(token_version, int) or token_version < 0:
+        raise ValueError("Token version must be a non-negative integer.")
 
     now = datetime.now(timezone.utc)
     payload = {
         "sub": subject,
+        "ver": token_version,
         "token_type": TOKEN_TYPE,
         "iat": now,
         "exp": now + timedelta(minutes=JWT_EXPIRE_MINUTES),

@@ -9,6 +9,8 @@ from fastapi import APIRouter, Depends
 
 from app.authentication.model.user import (
     ChangePassword,
+    EmailChangeRequest,
+    EmailChangeVerification,
     OtpRequest,
     OtpResend,
     OtpVerification,
@@ -19,14 +21,17 @@ from app.authentication.model.user import (
 )
 from app.authentication.security.current_user import get_current_user_id
 from app.authentication.service.auth_service.service_users import (
+    cancel_email_change as cancel_email_change_user,
     change_password as change_password_user,
     get_profile as get_profile_user,
     login_user,
     register_user,
+    request_email_change as request_email_change_user,
     request_otp,
     resend_otp,
     reset_password,
     update_profile as update_profile_user,
+    verify_email_change as verify_email_change_user,
     verify_otp,
     verify_reset_otp as verify_reset_otp_user,
 )
@@ -82,6 +87,33 @@ def update_profile(
     return update_profile_user(user_id, payload)
 
 
+@router.post("/profile/email")
+def request_email_change(
+    payload: EmailChangeRequest,
+    user_id: int = Depends(get_current_user_id),
+):
+    return request_email_change_user(
+        user_id,
+        payload.newEmail,
+        payload.currentPassword,
+    )
+
+
+@router.post("/profile/email/verify")
+def verify_email_change(
+    payload: EmailChangeVerification,
+    user_id: int = Depends(get_current_user_id),
+):
+    return verify_email_change_user(user_id, payload.otp)
+
+
+@router.delete("/profile/email")
+def cancel_email_change(
+    user_id: int = Depends(get_current_user_id),
+):
+    return cancel_email_change_user(user_id)
+
+
 @router.post("/change-password")
 def change_password(
     payload: ChangePassword,
@@ -89,7 +121,6 @@ def change_password(
 ):
     return change_password_user(
         user_id,
-        payload.email,
         payload.oldPassword,
         payload.newPassword,
     )

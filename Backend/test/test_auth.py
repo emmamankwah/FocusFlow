@@ -50,6 +50,8 @@ class AuthFlowTests(unittest.TestCase):
         self.client = TestClient(app)
         self.emails: list[str] = []
         self.sent_otps: list[dict] = []
+        self.sent_notices: list[dict] = []
+
         self._send_patch = mock.patch.object(
             service_users,
             "send_verification_email",
@@ -57,10 +59,30 @@ class AuthFlowTests(unittest.TestCase):
         )
         self._send_patch.start()
         self.addCleanup(self._send_patch.stop)
+
+        self._change_send_patch = mock.patch.object(
+            service_users,
+            "send_email_change_verification",
+            side_effect=self._capture_email,
+        )
+        self._change_send_patch.start()
+        self.addCleanup(self._change_send_patch.stop)
+
+        self._notice_patch = mock.patch.object(
+            service_users,
+            "send_email_change_notice",
+            side_effect=self._capture_notice,
+        )
+        self._notice_patch.start()
+        self.addCleanup(self._notice_patch.stop)
+
         self.addCleanup(self._cleanup)
 
     def _capture_email(self, user_email, plain_otp, expires_minutes):
         self.sent_otps.append({"email": user_email, "otp": plain_otp})
+
+    def _capture_notice(self, old_email, new_email):
+        self.sent_notices.append({"old_email": old_email, "new_email": new_email})
 
     def _otp(self, email: str) -> str:
         for item in reversed(self.sent_otps):
@@ -74,6 +96,12 @@ class AuthFlowTests(unittest.TestCase):
             return
         try:
             with connection.cursor() as cursor:
+                cursor.execute(
+                    "DELETE FROM pending_email_changes "
+                    "WHERE new_email = ANY(%s) OR user_id IN "
+                    "(SELECT id FROM users WHERE email = ANY(%s))",
+                    (self.emails, self.emails),
+                )
                 cursor.execute(
                     "DELETE FROM otp_table WHERE email = ANY(%s)",
                     (self.emails,),
@@ -125,6 +153,28 @@ class AuthFlowTests(unittest.TestCase):
         )
         return response.json()
 
+    def _headers(self, token: str) -> dict:
+        return {"Authorization": f"Bearer {token}"}
+
+    def _request_email_change(
+        self,
+        headers: dict,
+        new_email: str,
+        password: str = PASSWORD,
+    ):
+        return self.client.post(
+            "/auth/profile/email",
+            headers=headers,
+            json={"newEmail": new_email, "currentPassword": password},
+        )
+
+    def _verify_email_change(self, headers: dict, otp: str):
+        return self.client.post(
+            "/auth/profile/email/verify",
+            headers=headers,
+            json={"otp": otp},
+        )
+
     def test_register_verify_login_profile_and_change_password(self):
         email, username, response = self._register()
         self.assertEqual(response.status_code, 200)
@@ -145,7 +195,7 @@ class AuthFlowTests(unittest.TestCase):
 
         login = self._login(email)
         self.assertIn("access_token", login)
-        headers = {"Authorization": f"Bearer {login['access_token']}"}
+        headers = self._headers(login["access_token"])
 
         profile = self.client.get("/auth/profile", headers=headers)
         self.assertEqual(profile.status_code, 200)
@@ -160,11 +210,56 @@ class AuthFlowTests(unittest.TestCase):
                 "firstName": "Ada",
                 "lastName": "Lovelace",
                 "username": new_username,
-                "email": email,
             },
         )
         self.assertEqual(updated.status_code, 200)
         self.assertEqual(updated.json()["username"], new_username)
+
+        changed = self.client.post(
+            "/auth/change-password",
+            headers=headers,
+            json={
+                "oldPassword": PASSWORD,
+                "newPassword": NEW_PASSWORD,
+            },
+        )
+        self.assertEqual(changed.status_code, 200)
+        self.assertNotIn("error", changed.json())
+        self.assertIn("access_token", changed.json())
+
+        self.assertEqual(
+            self.client.get("/auth/profile", headers=headers).status_code,
+            401,
+        )
+        new_headers = self._headers(changed.json()["access_token"])
+        self.assertEqual(
+            self.client.get("/auth/profile", headers=new_headers).status_code,
+            200,
+        )
+
+        self.assertIn("error", self._login(email, PASSWORD))
+        self.assertIn("access_token", self._login(email, NEW_PASSWORD))
+
+    def test_profile_rejects_email_field(self):
+        email, username = self._verified_user()
+        token = self._login(email)["access_token"]
+        headers = self._headers(token)
+
+        updated = self.client.put(
+            "/auth/profile",
+            headers=headers,
+            json={
+                "firstName": "Ada",
+                "lastName": "Lovelace",
+                "username": username,
+                "email": _email(),
+            },
+        )
+        self.assertEqual(updated.status_code, 422)
+        self.assertEqual(
+            self.client.get("/auth/profile", headers=headers).json()["email"],
+            email,
+        )
 
         changed = self.client.post(
             "/auth/change-password",
@@ -175,17 +270,37 @@ class AuthFlowTests(unittest.TestCase):
                 "newPassword": NEW_PASSWORD,
             },
         )
-        self.assertEqual(changed.status_code, 200)
+        self.assertEqual(changed.status_code, 422)
+
+    def test_password_change_invalidates_existing_tokens(self):
+        email, _ = self._verified_user()
+        token = self._login(email)["access_token"]
+        headers = self._headers(token)
+
+        changed = self.client.post(
+            "/auth/change-password",
+            headers=headers,
+            json={"oldPassword": PASSWORD, "newPassword": NEW_PASSWORD},
+        )
         self.assertNotIn("error", changed.json())
 
-        self.assertIn("error", self._login(email, PASSWORD))
-        self.assertIn("access_token", self._login(email, NEW_PASSWORD))
+        self.assertEqual(
+            self.client.get("/auth/profile", headers=headers).status_code,
+            401,
+        )
+        new_headers = self._headers(changed.json()["access_token"])
+        self.assertEqual(
+            self.client.get("/auth/profile", headers=new_headers).status_code,
+            200,
+        )
 
-    def test_password_reset_flow(self):
+    def test_password_reset_invalidates_existing_tokens(self):
         email = _email()
         username = _username()
         self.emails.append(email)
         create_user("Reset", "User", email, username, hash_password(PASSWORD))
+        token = self._login(email)["access_token"]
+        headers = self._headers(token)
 
         requested = self.client.post(
             "/auth/forgot-password",
@@ -209,8 +324,211 @@ class AuthFlowTests(unittest.TestCase):
         self.assertEqual(reset.status_code, 200)
         self.assertNotIn("error", reset.json())
 
+        self.assertEqual(
+            self.client.get("/auth/profile", headers=headers).status_code,
+            401,
+        )
         self.assertIn("access_token", self._login(email, NEW_PASSWORD))
         self.assertIn("error", self._login(email, PASSWORD))
+
+    def test_email_change_requires_current_password(self):
+        email, _ = self._verified_user()
+        token = self._login(email)["access_token"]
+        headers = self._headers(token)
+
+        new_email = _email()
+        self.emails.append(new_email)
+        response = self._request_email_change(headers, new_email, "Wrong!Pass1")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.json().get("error"),
+            "Current password is incorrect.",
+        )
+        self.assertFalse(
+            any(item["email"] == new_email for item in self.sent_otps)
+        )
+        self.assertEqual(
+            self.client.get("/auth/profile", headers=headers).json()["email"],
+            email,
+        )
+
+    def test_email_change_flow_updates_identity_and_invalidates_tokens(self):
+        old_email, _ = self._verified_user()
+        token = self._login(old_email)["access_token"]
+        headers = self._headers(token)
+
+        new_email = _email()
+        self.emails.append(new_email)
+
+        requested = self._request_email_change(headers, new_email)
+        self.assertEqual(requested.status_code, 200)
+        self.assertNotIn("error", requested.json())
+        self.assertEqual(
+            self.client.get("/auth/profile", headers=headers).json()["email"],
+            old_email,
+        )
+        self.assertIn("error", self._login(new_email))
+
+        otp = self._otp(new_email)
+        wrong = "000000" if otp != "000000" else "111111"
+        rejected = self._verify_email_change(headers, wrong)
+        self.assertIn("Invalid code", rejected.json()["error"])
+
+        verified = self._verify_email_change(headers, otp)
+        self.assertEqual(verified.status_code, 200)
+        self.assertNotIn("error", verified.json())
+        self.assertEqual(verified.json()["email"], new_email)
+        self.assertIn("access_token", verified.json())
+
+        self.assertEqual(
+            self.sent_notices,
+            [{"old_email": old_email, "new_email": new_email}],
+        )
+        self.assertEqual(
+            self.client.get("/auth/profile", headers=headers).status_code,
+            401,
+        )
+        new_headers = self._headers(verified.json()["access_token"])
+        self.assertEqual(
+            self.client.get("/auth/profile", headers=new_headers).json()["email"],
+            new_email,
+        )
+        self.assertIn("error", self._login(old_email))
+        self.assertIn("access_token", self._login(new_email))
+
+    def test_email_change_rejects_same_and_duplicate_emails(self):
+        email, _ = self._verified_user()
+        token = self._login(email)["access_token"]
+        headers = self._headers(token)
+
+        same = self._request_email_change(headers, email)
+        self.assertEqual(
+            same.json().get("error"),
+            "New email must be different from the current email.",
+        )
+
+        other_email, _ = self._verified_user()
+        duplicate = self._request_email_change(headers, other_email)
+        self.assertEqual(duplicate.json().get("error"), "Email already in use.")
+
+        pending_email, _, pending = self._register()
+        self.assertNotIn("error", pending.json())
+        pending_response = self._request_email_change(headers, pending_email)
+        self.assertEqual(
+            pending_response.json().get("error"),
+            "Email already in use.",
+        )
+
+        second_email, _ = self._verified_user()
+        second_headers = self._headers(self._login(second_email)["access_token"])
+        target = _email()
+        self.emails.append(target)
+        first_request = self._request_email_change(headers, target)
+        self.assertNotIn("error", first_request.json())
+
+        second_request = self._request_email_change(second_headers, target)
+        self.assertEqual(
+            second_request.json().get("error"),
+            "Email already in use.",
+        )
+
+    def test_email_change_resend_cooldown(self):
+        email, _ = self._verified_user()
+        headers = self._headers(self._login(email)["access_token"])
+
+        new_email = _email()
+        self.emails.append(new_email)
+
+        first = self._request_email_change(headers, new_email)
+        self.assertNotIn("error", first.json())
+
+        second = self._request_email_change(headers, new_email)
+        self.assertIn("Too many verification emails requested", second.json()["error"])
+
+    def test_email_change_cancel_discards_pending_code(self):
+        email, _ = self._verified_user()
+        headers = self._headers(self._login(email)["access_token"])
+
+        new_email = _email()
+        self.emails.append(new_email)
+        requested = self._request_email_change(headers, new_email)
+        self.assertNotIn("error", requested.json())
+
+        cancelled = self.client.delete("/auth/profile/email", headers=headers)
+        self.assertEqual(cancelled.status_code, 200)
+        self.assertNotIn("error", cancelled.json())
+
+        verified = self._verify_email_change(headers, self._otp(new_email))
+        self.assertEqual(
+            verified.json().get("error"),
+            "No active email change. Request a new one.",
+        )
+
+    def test_email_change_expired_code_is_rejected(self):
+        email, _ = self._verified_user()
+        headers = self._headers(self._login(email)["access_token"])
+
+        new_email = _email()
+        self.emails.append(new_email)
+        requested = self._request_email_change(headers, new_email)
+        self.assertNotIn("error", requested.json())
+
+        connection = database_connection()
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    "UPDATE pending_email_changes "
+                    "SET expires_at = now() - interval '1 minute' "
+                    "WHERE new_email = %s",
+                    (new_email,),
+                )
+            connection.commit()
+        finally:
+            connection.close()
+
+        verified = self._verify_email_change(headers, self._otp(new_email))
+        self.assertIn("expired", verified.json()["error"].lower())
+
+    def test_email_change_preserves_case_and_trims_whitespace(self):
+        base = f"AuthFlow+{uuid.uuid4().hex}"
+        email = f"{base}@Example.COM"
+        lower_email = email.lower()
+        padded = f"  {email}  "
+        self.emails.extend([email, lower_email])
+
+        registered = self.client.post(
+            "/auth/register",
+            json=_payload(padded, _username()),
+        )
+        self.assertEqual(registered.status_code, 200)
+        self.assertNotIn("error", registered.json())
+
+        verified = self.client.post(
+            "/auth/verify-otp",
+            json={"email": email, "otp": self._otp(email)},
+        )
+        self.assertNotIn("error", verified.json())
+
+        login = self._login(email)
+        self.assertIn("access_token", login)
+        headers = self._headers(login["access_token"])
+        self.assertEqual(
+            self.client.get("/auth/profile", headers=headers).json()["email"],
+            email,
+        )
+        self.assertIn("error", self._login(lower_email))
+
+        changed = self._request_email_change(headers, lower_email)
+        self.assertNotIn("error", changed.json())
+        verified_change = self._verify_email_change(
+            headers,
+            self._otp(lower_email),
+        )
+        self.assertNotIn("error", verified_change.json())
+        self.assertEqual(verified_change.json()["email"], lower_email)
+        self.assertIn("access_token", self._login(lower_email))
+        self.assertIn("error", self._login(email))
 
     def test_wrong_otp_is_rejected_then_correct_otp_works(self):
         email, _, _ = self._register()
@@ -256,82 +574,6 @@ class AuthFlowTests(unittest.TestCase):
             "Username already taken.",
         )
 
-    def test_profile_email_change_updates_login_identity(self):
-        old_email, username = self._verified_user()
-        token = self._login(old_email)["access_token"]
-        headers = {"Authorization": f"Bearer {token}"}
-
-        new_email = _email()
-        self.emails.append(new_email)
-
-        updated = self.client.put(
-            "/auth/profile",
-            headers=headers,
-            json={
-                "firstName": "Ada",
-                "lastName": "Lovelace",
-                "username": username,
-                "email": new_email,
-            },
-        )
-        self.assertEqual(updated.status_code, 200)
-        self.assertEqual(updated.json()["email"], new_email)
-
-        profile = self.client.get("/auth/profile", headers=headers)
-        self.assertEqual(profile.json()["email"], new_email)
-
-        self.assertIn("access_token", self._login(new_email, PASSWORD))
-        self.assertIn("error", self._login(old_email, PASSWORD))
-        self.assertFalse(
-            any(item["email"] == new_email for item in self.sent_otps)
-        )
-
-    def test_profile_email_change_rejects_registered_email(self):
-        email, username = self._verified_user()
-        token = self._login(email)["access_token"]
-
-        other_email = _email()
-        other_username = _username()
-        self.emails.append(other_email)
-        create_user(
-            "Other",
-            "User",
-            other_email,
-            other_username,
-            hash_password(PASSWORD),
-        )
-
-        response = self.client.put(
-            "/auth/profile",
-            headers={"Authorization": f"Bearer {token}"},
-            json={
-                "firstName": "Ada",
-                "lastName": "Lovelace",
-                "username": username,
-                "email": other_email,
-            },
-        )
-        self.assertEqual(response.json().get("error"), "Email already in use.")
-
-    def test_profile_email_change_rejects_pending_email(self):
-        email, username = self._verified_user()
-        token = self._login(email)["access_token"]
-
-        pending_email, _, pending = self._register()
-        self.assertNotIn("error", pending.json())
-
-        response = self.client.put(
-            "/auth/profile",
-            headers={"Authorization": f"Bearer {token}"},
-            json={
-                "firstName": "Ada",
-                "lastName": "Lovelace",
-                "username": username,
-                "email": pending_email,
-            },
-        )
-        self.assertEqual(response.json().get("error"), "Email already in use.")
-
     @unittest.expectedFailure
     def test_register_rejects_username_held_by_pending_registration(self):
         _, username, first = self._register()
@@ -354,45 +596,6 @@ class AuthFlowTests(unittest.TestCase):
             _, _, response = self._register(username=username)
             self.assertEqual(response.status_code, 422)
             self.assertIn("detail", response.json())
-
-    @unittest.expectedFailure
-    def test_profile_email_change_requires_verification(self):
-        email, _ = self._verified_user()
-        token = self._login(email)["access_token"]
-
-        new_email = _email()
-        self.emails.append(new_email)
-        response = self.client.put(
-            "/auth/profile",
-            headers={"Authorization": f"Bearer {token}"},
-            json={
-                "firstName": "Ada",
-                "lastName": "Lovelace",
-                "username": _username(),
-                "email": new_email,
-            },
-        )
-        self.assertIn("verification", response.json().get("message", "").lower())
-
-    @unittest.expectedFailure
-    def test_password_change_invalidates_existing_tokens(self):
-        email, _ = self._verified_user()
-        token = self._login(email)["access_token"]
-        headers = {"Authorization": f"Bearer {token}"}
-
-        changed = self.client.post(
-            "/auth/change-password",
-            headers=headers,
-            json={
-                "email": email,
-                "oldPassword": PASSWORD,
-                "newPassword": NEW_PASSWORD,
-            },
-        )
-        self.assertNotIn("error", changed.json())
-
-        profile = self.client.get("/auth/profile", headers=headers)
-        self.assertEqual(profile.status_code, 401)
 
 
 if __name__ == "__main__":

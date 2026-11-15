@@ -3,10 +3,11 @@
 import re
 from typing import Annotated
 
+from email_validator import EmailNotValidError, validate_email
 from pydantic import (
     BaseModel,
     BeforeValidator,
-    EmailStr,
+    ConfigDict,
     Field,
     field_validator,
     model_validator,
@@ -20,9 +21,22 @@ def _strip(value):
 
 StrippedStr = Annotated[str, BeforeValidator(_strip)]
 
-# Trim emails before validating them, so " user@example.com " and
-# "user@example.com" reach the database and the lookups as the same value.
-NormalizedEmail = Annotated[EmailStr, BeforeValidator(_strip)]
+
+def _strip_and_validate_email(value):
+    """Trim surrounding whitespace and validate without changing the casing."""
+    if not isinstance(value, str):
+        return value
+    value = value.strip()
+    try:
+        validate_email(value, check_deliverability=False)
+    except EmailNotValidError as exc:
+        raise ValueError(str(exc)) from exc
+    return value
+
+
+# Email casing is part of the account identity: only surrounding whitespace is
+# removed, and the validated value is stored exactly as entered.
+TrimmedEmail = Annotated[str, BeforeValidator(_strip_and_validate_email)]
 
 
 class PasswordValidation(BaseModel):
@@ -57,14 +71,14 @@ class PasswordValidation(BaseModel):
 
 
 class UserLogin(BaseModel):
-    email: NormalizedEmail = Field(max_length=255)
+    email: TrimmedEmail = Field(max_length=255)
     password: str
 
 
 class UserRegister(PasswordValidation):
     firstName: StrippedStr = Field(min_length=1, max_length=100)
     lastName: StrippedStr = Field(min_length=1, max_length=100)
-    email: NormalizedEmail = Field(min_length=1, max_length=255)
+    email: TrimmedEmail = Field(min_length=1, max_length=255)
     username: StrippedStr = Field(
         min_length=1,
         max_length=100,
@@ -84,31 +98,34 @@ class UserRegister(PasswordValidation):
 
 
 class ResetPassword(PasswordValidation):
-    email: NormalizedEmail = Field(min_length=1, max_length=255)
+    email: TrimmedEmail = Field(min_length=1, max_length=255)
     otp: StrippedStr = Field(min_length=1)
     newPassword: str
 
 
 class ChangePassword(PasswordValidation):
-    email: NormalizedEmail = Field(min_length=1, max_length=255)
+    model_config = ConfigDict(extra="forbid")
+
     oldPassword: str
     newPassword: str
 
 
 class OtpRequest(BaseModel):
-    email: NormalizedEmail = Field(min_length=1, max_length=255)
+    email: TrimmedEmail = Field(min_length=1, max_length=255)
 
 
 class OtpVerification(BaseModel):
-    email: NormalizedEmail = Field(min_length=1, max_length=255)
+    email: TrimmedEmail = Field(min_length=1, max_length=255)
     otp: StrippedStr = Field(min_length=1)
 
 
 class OtpResend(BaseModel):
-    email: NormalizedEmail = Field(min_length=1, max_length=255)
+    email: TrimmedEmail = Field(min_length=1, max_length=255)
 
 
 class UserProfileUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     firstName: StrippedStr = Field(min_length=1, max_length=100)
     lastName: StrippedStr = Field(min_length=1, max_length=100)
     username: StrippedStr = Field(
@@ -116,7 +133,15 @@ class UserProfileUpdate(BaseModel):
         max_length=100,
         pattern=r"^\S+$",
     )
-    email: NormalizedEmail = Field(min_length=1, max_length=255)
+
+
+class EmailChangeRequest(BaseModel):
+    newEmail: TrimmedEmail = Field(min_length=1, max_length=255)
+    currentPassword: str = Field(min_length=1)
+
+
+class EmailChangeVerification(BaseModel):
+    otp: StrippedStr = Field(min_length=1)
 
 
 class TokenResponse(BaseModel):
@@ -129,4 +154,4 @@ class UserPublic(BaseModel):
     firstName: str
     lastName: str
     username: str
-    email: NormalizedEmail
+    email: str

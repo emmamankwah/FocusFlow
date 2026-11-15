@@ -25,16 +25,22 @@ from app.authentication.model.user import (
 )
 from app.authentication.repository.authentication.user_repo import (
     clear_otp,
+    delete_pending_email_change,
     delete_pending_user,
+    email_in_use_exact,
+    get_pending_email_change,
     get_pending_user,
     get_user_by_email,
     get_user_by_id,
     get_user_by_username,
     get_user_otp,
     increment_attempts,
+    increment_email_change_attempts,
     move_pending_user_to_users,
     save_otp,
+    save_pending_email_change,
     save_pending_user,
+    update_user_email_and_bump_version,
     update_user_password,
     update_user_password_by_id,
     update_user_profile,
@@ -48,6 +54,8 @@ from app.authentication.security.secure_users import (
 from app.authentication.security.token import create_access_token
 from app.authentication.utilities.authentication_user.mail import (
     create_verification_otp,
+    send_email_change_notice,
+    send_email_change_verification,
     send_verification_email,
 )
 
@@ -75,6 +83,14 @@ otp_verify_limiter = SlidingWindowLimiter(
     "otp-verify",
     ((OTP_FAILED_LIMIT, OTP_FAILED_WINDOW_SECONDS),),
 )
+email_change_send_limiter = SlidingWindowLimiter(
+    "email-change-send",
+    ((1, OTP_SEND_COOLDOWN_SECONDS), (OTP_SEND_LIMIT, OTP_SEND_WINDOW_SECONDS)),
+)
+email_change_verify_limiter = SlidingWindowLimiter(
+    "email-change-verify",
+    ((OTP_FAILED_LIMIT, OTP_FAILED_WINDOW_SECONDS),),
+)
 
 logger = logging.getLogger(__name__)
 
@@ -89,6 +105,10 @@ class OtpRateLimited(Exception):
 
 def _rate_limit_key(email: str) -> str:
     return email.strip()
+
+
+def _email_change_key(user_id: int, email: str) -> str:
+    return f"{user_id}:{email}"
 
 
 def _wait_text(seconds: float) -> str:
@@ -197,7 +217,10 @@ def register_user(user_data: UserRegister) -> Dict[str, str]:
             "message": "A verification is already in progress for this email. "
                        "Wait for it to expire or use the resend flow.",
         }
-        
+
+    if email_in_use_exact(email):
+        return {"error": "Email already in use."}
+
     save_pending_user(
         user_data.firstName,
         user_data.lastName,
@@ -231,7 +254,10 @@ def login_user(user: UserLogin) -> Dict[str, str]:
     if not verify_password(user.password, existing_user["password"]):
         return {"error": "Invalid email or password."}
 
-    token = create_access_token(str(existing_user["id"]))
+    token = create_access_token(
+        str(existing_user["id"]),
+        int(existing_user.get("token_version") or 0),
+    )
     return {
         "message": "Login successful.",
         "access_token": token,
@@ -264,15 +290,10 @@ def update_profile(
     if not user:
         return {"error": "User not found."}
 
-    email = user_data.email.strip()
     username = user_data.username.strip()
 
     if not username:
         return {"error": "Username cannot be empty."}
-
-    if email != user["email"]:
-        if get_user_by_email(email) or get_pending_user(email):
-            return {"error": "Email already in use."}
 
     existing_username = get_user_by_username(username)
     if existing_username and existing_username["id"] != user_id:
@@ -283,14 +304,12 @@ def update_profile(
         user_data.firstName,
         user_data.lastName,
         username,
-        email,
     )
     return get_profile(user_id)
 
 
 def change_password(
     user_id: int,
-    email: str,
     old_password: str,
     new_password: str,
 ) -> Dict[str, str]:
@@ -299,14 +318,164 @@ def change_password(
     if not user:
         return {"error": "User not found."}
 
-    if email.strip() != user["email"]:
-        return {"error": "Email does not match the signed-in account."}
-
     if not verify_password(old_password, user["password"]):
         return {"error": "Current password is incorrect."}
 
-    update_user_password_by_id(user_id, hash_password(new_password))
-    return {"message": "Password changed successfully."}
+    token_version = update_user_password_by_id(
+        user_id,
+        hash_password(new_password),
+    )
+    if token_version is None:
+        return {"error": "User not found."}
+
+    token = create_access_token(str(user_id), token_version)
+    return {
+        "message": "Password changed successfully.",
+        "access_token": token,
+        "token_type": "bearer",
+    }
+
+
+def request_email_change(
+    user_id: int,
+    new_email: str,
+    current_password: str,
+) -> Dict[str, str]:
+    user = get_user_by_id(user_id)
+
+    if not user:
+        return {"error": "User not found."}
+
+    if not verify_password(current_password, user["password"]):
+        return {"error": "Current password is incorrect."}
+
+    if new_email == user["email"]:
+        return {"error": "New email must be different from the current email."}
+
+    if email_in_use_exact(new_email, exclude_user_id=user_id):
+        return {"error": "Email already in use."}
+
+    wait = email_change_send_limiter.hit(_email_change_key(user_id, new_email))
+    if wait:
+        return {
+            "error": "Too many verification emails requested. "
+            f"Try again in {_wait_text(wait)}."
+        }
+
+    expires_minutes = OTP_EXPIRE_MINUTES
+    otp_data = create_verification_otp(expires_minutes)
+
+    try:
+        save_pending_email_change(
+            user_id,
+            new_email,
+            otp_data["hashed_otp"],
+            otp_data["expired_at"],
+            OTP_MAX_ATTEMPTS,
+        )
+    except ValueError as exc:
+        return {"error": str(exc)}
+    except Exception:
+        logger.exception("Could not save pending email change for user %s", user_id)
+        return {"error": "Could not start the email change. Please try again."}
+
+    try:
+        send_email_change_verification(
+            new_email,
+            otp_data["plain_otp"],
+            expires_minutes,
+        )
+    except Exception:
+        logger.exception("Could not send email change verification to %s", new_email)
+        try:
+            delete_pending_email_change(user_id)
+        except Exception:
+            logger.exception(
+                "Could not delete pending email change for user %s",
+                user_id,
+            )
+        return {"error": "Could not send the verification email. Please try again."}
+
+    return {"message": "Verification code sent to the new email."}
+
+
+def verify_email_change(user_id: int, otp: str) -> Dict[str, object]:
+    pending = get_pending_email_change(user_id)
+
+    if not pending:
+        return {"error": "No active email change. Request a new one."}
+
+    new_email = pending["new_email"]
+    key = _email_change_key(user_id, new_email)
+
+    wait = email_change_verify_limiter.retry_after(key)
+    if wait:
+        return {
+            "error": f"Too many failed attempts. Try again in {_wait_text(wait)}."
+        }
+
+    expires_at = pending["expires_at"]
+    if expires_at is None:
+        delete_pending_email_change(user_id)
+        return {"error": "Verification code expired. Request a new one."}
+
+    now = datetime.now(timezone.utc)
+    if expires_at.tzinfo is None:
+        expires_at = expires_at.replace(tzinfo=timezone.utc)
+    if expires_at < now:
+        delete_pending_email_change(user_id)
+        return {"error": "Verification code expired. Request a new one."}
+
+    if pending["attempts"] >= pending["total_attempts"]:
+        return {"error": "Too many attempts. Request a new code."}
+
+    if not secure_verify_otp(otp.strip(), pending["otp_hash"]):
+        email_change_verify_limiter.hit(key)
+        row = increment_email_change_attempts(user_id) or {}
+        attempts = row.get("attempts", pending["attempts"] + 1)
+        total = row.get("total_attempts", pending["total_attempts"])
+        remaining = total - attempts
+        if remaining <= 0:
+            return {"error": "Too many attempts. Request a new code."}
+        return {"error": f"Invalid code. {remaining} attempt(s) left."}
+
+    user = get_user_by_id(user_id)
+    if not user:
+        delete_pending_email_change(user_id)
+        return {"error": "User not found."}
+
+    old_email = user["email"]
+
+    try:
+        token_version = update_user_email_and_bump_version(user_id, new_email)
+    except ValueError as exc:
+        delete_pending_email_change(user_id)
+        return {"error": str(exc)}
+    except Exception:
+        logger.exception("Could not complete email change for user %s", user_id)
+        return {"error": "Could not complete the email change. Please try again."}
+
+    try:
+        send_email_change_notice(old_email, new_email)
+    except Exception:
+        logger.exception("Could not notify old email %s", old_email)
+
+    profile = get_profile(user_id)
+    if "error" in profile:
+        return profile
+
+    token = create_access_token(str(user_id), token_version)
+    return {
+        **profile,
+        "message": "Email changed successfully.",
+        "access_token": token,
+        "token_type": "bearer",
+    }
+
+
+def cancel_email_change(user_id: int) -> Dict[str, str]:
+    delete_pending_email_change(user_id)
+    return {"message": "Email change cancelled."}
 
 
 def request_otp(email: str) -> Dict[str, str]:
@@ -406,7 +575,10 @@ def reset_password(email: str, otp: str, new_password: str) -> Dict[str, str]:
     if error_check:
         return {"error": error_check}
 
-    update_user_password(email, hash_password(new_password))
+    token_version = update_user_password(email, hash_password(new_password))
+    if token_version is None:
+        return {"error": "Invalid email."}
+
     clear_otp(email)
 
     return {"message": "Password reset successfully."}
