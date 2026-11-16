@@ -43,9 +43,19 @@ Response:
 }
 ```
 
-- `messages` (required): conversation history in order (system/user/assistant).
-- `context` (optional): document text the assistant should answer from.
-  Without it, the assistant uses a generic default prompt.
+- `messages` (required): conversation history in order (`user`/`assistant`).
+  Client-supplied `system` messages are rejected; the server owns the system prompt.
+- `context` (optional): data the assistant should reason over. When supplied, the
+  planner prompt is used (`# PLANNER DATA`); otherwise the generic default prompt
+  applies.
+
+Prompt modes live in `Backend/app/ai/prompts.py` and are shared with the RAG layer:
+
+- `planner` — productivity-coach answers grounded in planner data.
+- `rag` — document-QA answers that cite numbered chunks `[n]`.
+
+Temperature is lower for planning/RAG (0.3/0.2), and replies are capped at 450
+tokens via `max_tokens`.
 
 ## Configuration
 
