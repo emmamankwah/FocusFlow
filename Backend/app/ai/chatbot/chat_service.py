@@ -5,30 +5,43 @@ from dotenv import load_dotenv
 from openai import OpenAI
 from openai.types.chat import ChatCompletionMessageParam
 
+from app.ai.prompts import (
+    DEFAULT_SYSTEM_PROMPT,
+    planner_system_prompt,
+    rag_system_prompt,
+)
+
 # Backend/.env (parents: chatbot -> ai -> app -> Backend).
 load_dotenv(Path(__file__).resolve().parents[3] / ".env")
 
-DEFAULT_SYSTEM_PROMPT = (
-    "You are a helpful AI assistant. Answer clearly and concisely."
-)
-
-CONTEXT_SYSTEM_PROMPT = (
-    "You are a helpful AI assistant that answers questions based only on the "
-    "provided context. If the answer is not in the context, say that you do not "
-    "know and suggest the user consult a human expert.\n\n"
-    "Context:\n{context}"
-)
+TEMPERATURES = {
+    "planner": 0.3,
+    "rag": 0.2,
+    "default": 0.7,
+}
+MAX_REPLY_TOKENS = 450
 
 
-def build_system_prompt(context: str | None) -> str:
-    if context:
-        return CONTEXT_SYSTEM_PROMPT.format(context=context)
+def normalise_mode(mode: str) -> str:
+    return mode if mode in TEMPERATURES else "default"
+
+
+def build_system_prompt(context: str | None, mode: str = "planner") -> str:
+    mode = normalise_mode(mode)
+    if mode == "rag" and context:
+        return rag_system_prompt(context)
+    if mode == "planner" and context:
+        return planner_system_prompt(context)
     return DEFAULT_SYSTEM_PROMPT
 
 
-def get_llm_messages(messages, context: str | None = None) -> list[ChatCompletionMessageParam]:
+def get_llm_messages(
+    messages,
+    context: str | None = None,
+    mode: str = "planner",
+) -> list[ChatCompletionMessageParam]:
     llm_messages: list[ChatCompletionMessageParam] = [
-        {"role": "system", "content": build_system_prompt(context)}
+        {"role": "system", "content": build_system_prompt(context, mode)}
     ]
     for message in messages:
         llm_messages.append({"role": message.role, "content": message.content})
@@ -43,10 +56,12 @@ def get_client() -> OpenAI:
     )
 
 
-def get_reply(messages, context: str | None = None) -> str:
+def get_reply(messages, context: str | None = None, mode: str = "planner") -> str:
+    mode = normalise_mode(mode)
     completion = get_client().chat.completions.create(
         model=os.environ.get("OPENAI_MODEL", "nvidia/nemotron-3-ultra-550b-a55b:free"),
-        messages=get_llm_messages(messages, context),
-        temperature=0.7,
+        messages=get_llm_messages(messages, context, mode),
+        temperature=TEMPERATURES[mode],
+        max_tokens=MAX_REPLY_TOKENS,
     )
     return completion.choices[0].message.content

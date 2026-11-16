@@ -31,6 +31,7 @@ def chat(
     reply = chat_service.get_reply(
         messages=request.messages,
         context=request.context,
+        mode="planner",
     )
     return models.ChatResponse(reply=reply)
 

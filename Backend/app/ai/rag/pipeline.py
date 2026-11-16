@@ -2,12 +2,11 @@
 
 from __future__ import annotations
 
+from app.ai.prompts import INSUFFICIENT_INFO
+
 from . import config
 
-NO_ANSWER = (
-    "I could not find anything in your documents that answers that. "
-    "Add a document and try again."
-)
+NO_ANSWER = INSUFFICIENT_INFO
 
 
 def build_context(chunks: list[dict], max_chars: int | None = None) -> str:
@@ -47,7 +46,11 @@ def answer(
     from app.ai.chatbot.chat_service import get_reply
     from app.ai.chatbot.models import ChatMessage
 
-    reply = get_reply([ChatMessage(role="user", content=query)], context)
+    reply = get_reply(
+        [ChatMessage(role="user", content=query)],
+        context,
+        mode="rag",
+    )
 
     sources = [
         {
