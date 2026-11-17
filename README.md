@@ -33,7 +33,9 @@ The Compose file is intended for local development, and the ports are published
 on the host. The Docker PostgreSQL container is published on host port `5433`
 (user `focusflow`, database `focusflow`) to avoid clashing with a native
 PostgreSQL installation that may occupy `5432`; connect host tools to
-`localhost:5433`. Source files are packaged into their images, so rebuild after
+`localhost:5433`. `Backend/.env` targets this same container
+(`127.0.0.1:5433`, user `focusflow`), so running the backend or tests on the host
+uses the same database as the containers. Source files are packaged into their images, so rebuild after
 changing frontend or backend files with `docker compose up --build -d`. Change
 the example credentials and configure production secrets and deployment
 networking before using an exposed deployment.
