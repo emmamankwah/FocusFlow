@@ -1,5 +1,3 @@
 -r ../../../requirements.txt
-# OCR also requires the Tesseract executable installed on the host.
-pytesseract
-Pillow
-pgvector
+# Python packages are installed by the root requirements file.
+# Image OCR also requires the Tesseract executable installed on the host.
