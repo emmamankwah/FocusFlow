@@ -14,6 +14,3 @@ pypdf
 python-docx
 python-multipart
 httpx
-# OCR also requires the Tesseract executable installed on the host.
-pytesseract
-Pillow

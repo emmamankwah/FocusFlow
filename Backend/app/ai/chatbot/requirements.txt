@@ -1,5 +1,1 @@
-fastapi
-uvicorn[standard]
-openai
-pydantic
-python-dotenv
+-r ../../../requirements.txt

@@ -1,13 +1,5 @@
-fastapi
-uvicorn
-pydantic
-python-dotenv
-psycopg2-binary
-openai
-fastembed
-pypdf
-python-docx
-python-multipart
-# OCR requires the Tesseract binary installed on the host.
+-r ../../../requirements.txt
+# OCR also requires the Tesseract executable installed on the host.
 pytesseract
 Pillow
+pgvector
