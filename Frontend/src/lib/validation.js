@@ -28,7 +28,6 @@ export const passwordRules = {
     if (!value) return true
     const missing = []
     if (!/[A-Z]/.test(value)) missing.push('an uppercase letter')
-    if (!/[a-z]/.test(value)) missing.push('a lowercase letter')
     if (!/\d/.test(value)) missing.push('a number')
     if (!/[^A-Za-z0-9]/.test(value)) missing.push('a symbol')
     if (!missing.length) return true

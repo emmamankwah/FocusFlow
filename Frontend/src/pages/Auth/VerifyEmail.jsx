@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import usePageTitle from '@/lib/usePageTitle'
-import { getPendingEmail, resendVerification, verifyEmail } from '@/lib/auth'
+import { getPendingEmail, resendVerification, verifyEmail } from '@/lib/mockAuth'
 import AuthLayout from '@/components/AuthLayout'
 import SubmitButton from '@/components/SubmitButton'
 import FormError from '@/components/FormError'
 
-const COOLDOWN_SECONDS = 45
+const COOLDOWN_SECONDS = 30
 
 export default function VerifyEmail() {
   usePageTitle('Verify your email — FocusFlow')
@@ -16,7 +16,6 @@ export default function VerifyEmail() {
   const [email] = useState(() => getPendingEmail())
 
   const [apiError, setApiError] = useState(null)
-  const [otp, setOtp] = useState('')
   const [notice, setNotice] = useState(null)
   const [verifying, setVerifying] = useState(false)
   const [resending, setResending] = useState(false)
@@ -36,8 +35,8 @@ export default function VerifyEmail() {
     setApiError(null)
     setVerifying(true)
     try {
-      await verifyEmail(email, otp)
-      navigate('/login', { replace: true, state: { verified: true } })
+      await verifyEmail(email)
+      navigate('/dashboard', { replace: true })
     } catch (err) {
       setApiError(err.message || 'Could not verify this email.')
       setVerifying(false)
@@ -49,8 +48,8 @@ export default function VerifyEmail() {
     setNotice(null)
     setResending(true)
     try {
-      await resendVerification(email)
-      setNotice(`A new verification code was sent to ${email}.`)
+      await resendVerification()
+      setNotice(`New verification link sent to ${email}.`)
       setCooldown(COOLDOWN_SECONDS)
       setResentAt((value) => value + 1)
     } catch (err) {
@@ -64,7 +63,7 @@ export default function VerifyEmail() {
     <AuthLayout
       eyebrow="One more step"
       title="Verify your email"
-      subtitle={`Enter the verification code sent to ${email}.`}
+      subtitle={`We sent a verification link to ${email}.`}
       brandTitle="Almost there"
       brandLead="Verify your address and FocusFlow will start building your first week."
       footer={
@@ -79,7 +78,10 @@ export default function VerifyEmail() {
       <div className="space-y-4">
         <div className="rounded-xl border border-cobalt/15 bg-cobalt/5 px-4 py-3.5 text-[0.84rem] leading-relaxed text-inkwell/75">
           <p className="font-semibold text-inkwell">{email}</p>
-          <p className="mt-1">Check your inbox and enter the code to finish setting up.</p>
+          <p className="mt-1">
+            Open the link in that email to finish setting up. In this preview, no email is
+            sent — verify instantly below.
+          </p>
         </div>
 
         <FormError message={apiError} />
@@ -96,18 +98,6 @@ export default function VerifyEmail() {
             handleVerify()
           }}
         >
-          <label htmlFor="verification-otp" className="mb-1.5 block text-[0.84rem] font-semibold text-inkwell">
-            Verification code
-          </label>
-          <input
-            id="verification-otp"
-            value={otp}
-            onChange={(event) => setOtp(event.target.value)}
-            required
-            autoComplete="one-time-code"
-            inputMode="numeric"
-            className="mb-4 h-12 w-full rounded-xl border border-inkwell/20 bg-white px-3.5 text-inkwell outline-none focus:border-cobalt"
-          />
           <SubmitButton loading={verifying} loadingText="Verifying...">
             Verify and continue
           </SubmitButton>
@@ -122,8 +112,8 @@ export default function VerifyEmail() {
           {resending
             ? 'Sending...'
             : cooldown > 0
-              ? `Resend code in ${cooldown}s`
-              : 'Resend code'}
+              ? `Resend email in ${cooldown}s`
+              : 'Resend email'}
         </button>
       </div>
     </AuthLayout>

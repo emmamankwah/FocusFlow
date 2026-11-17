@@ -8,7 +8,7 @@ import {
   usernameRules,
 } from '@/lib/validation'
 import usePageTitle from '@/lib/usePageTitle'
-import { signup } from '@/lib/auth'
+import { signup } from '@/lib/mockAuth'
 import AuthLayout from '@/components/AuthLayout'
 import TextField from '@/components/TextField'
 import Checkbox from '@/components/Checkbox'
