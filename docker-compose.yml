@@ -6,9 +6,6 @@ services:
       VITE_API_TARGET: http://backend:8000
     ports:
       - "3000:3000"
-    volumes:
-      - ./Frontend:/app
-      - frontend_node_modules:/app/node_modules
     depends_on:
       - backend
 
@@ -38,8 +35,8 @@ services:
       SMTP_PORT: ${SMTP_PORT:-465}
       RAG_EMBEDDING_CACHE: /app/.cache/fastembed
     volumes:
-      - ./Backend:/app
       - backend_embedding_cache:/app/.cache/fastembed
+    command: ["python", "-m", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
     depends_on:
       postgres:
         condition: service_healthy
@@ -77,6 +74,5 @@ services:
 
 volumes:
   backend_embedding_cache:
-  frontend_node_modules:
   postgres_data:
   redis_data:

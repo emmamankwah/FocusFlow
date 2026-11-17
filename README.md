@@ -29,10 +29,11 @@ volume is created. Optional AI chat needs `OPENAI_API_KEY` (and, when applicable
 `OPENAI_BASE_URL`) in `.env`. Registration email needs the SMTP/Gmail values in
 `.env`. Without those integrations, the rest of the local stack can still run.
 
-The Compose file is intended for local development: source folders are mounted
-for live reload, and the ports are published on the host. Change the example
-credentials and configure production secrets and deployment networking before
-using an exposed deployment.
+The Compose file is intended for local development, and the ports are published
+on the host. Source files are packaged into their images, so rebuild after
+changing frontend or backend files with `docker compose up --build -d`. Change
+the example credentials and configure production secrets and deployment
+networking before using an exposed deployment.
 
 An intelligent productivity platform that helps students and professionals organize, prioritize, and complete their work efficiently.
 
