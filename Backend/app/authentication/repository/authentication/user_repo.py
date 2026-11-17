@@ -94,6 +94,13 @@ def save_pending_user(first_name, last_name, email, username, hash_password):
                 (first_name, last_name, email, username, hash_password),
             )
         connection.commit()
+    except psycopg2.errors.UniqueViolation as exc:
+        connection.rollback()
+        # Two registrations can pass the pre-checks concurrently; the table's
+        # UNIQUE constraint is the final arbiter.
+        if exc.diag.constraint_name == "pending_users_username_key":
+            raise ValueError("Username already taken.") from exc
+        raise
     except Exception:
         connection.rollback()
         raise
@@ -139,6 +146,13 @@ def move_pending_user_to_users(email: str) -> None:
             )
             cursor.execute("DELETE FROM pending_users WHERE email = %s", (email,),)
         connection.commit()
+    except psycopg2.errors.UniqueViolation as exc:
+        connection.rollback()
+        # The username was free at staging time but a verified user claimed it
+        # before the code was verified; the pending row can never be promoted.
+        if exc.diag.constraint_name == "users_username_key":
+            raise ValueError("Username already in use. Please register again.") from exc
+        raise
     except Exception:
         connection.rollback()
         raise
@@ -423,6 +437,28 @@ def email_in_use_exact(email: str, exclude_user_id: int | None = None) -> bool:
                 LIMIT 1
                 """,
                 (email, exclude_user_id, email, email, exclude_user_id),
+            )
+            return cursor.fetchone() is not None
+    finally:
+        connection.close()
+
+
+def username_in_use(username: str, exclude_user_id: int | None = None) -> bool:
+    """True when a verified user or a pending registration holds the name."""
+    exclude_user_id = exclude_user_id if exclude_user_id is not None else -1
+    connection = _connect()
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT 1 FROM users
+                    WHERE username = %s AND id <> %s
+                UNION ALL
+                SELECT 1 FROM pending_users
+                    WHERE username = %s
+                LIMIT 1
+                """,
+                (username, exclude_user_id, username),
             )
             return cursor.fetchone() is not None
     finally:

@@ -32,7 +32,6 @@ from app.authentication.repository.authentication.user_repo import (
     get_pending_user,
     get_user_by_email,
     get_user_by_id,
-    get_user_by_username,
     get_user_otp,
     increment_attempts,
     increment_email_change_attempts,
@@ -44,6 +43,7 @@ from app.authentication.repository.authentication.user_repo import (
     update_user_password,
     update_user_password_by_id,
     update_user_profile,
+    username_in_use,
 )
 from app.authentication.security.rate_limit import RedisSlidingWindowLimiter
 from app.authentication.security.secure_users import (
@@ -207,7 +207,7 @@ def register_user(user_data: UserRegister) -> Dict[str, str]:
     if get_user_by_email(email):
         return {"error": "Email already registered."}
 
-    if get_user_by_username(username):
+    if username_in_use(username):
         return {"error": "Username already taken."}
 
     if get_pending_user(email):
@@ -221,13 +221,16 @@ def register_user(user_data: UserRegister) -> Dict[str, str]:
     if email_in_use_exact(email):
         return {"error": "Email already in use."}
 
-    save_pending_user(
-        user_data.firstName,
-        user_data.lastName,
-        email,
-        username,
-        hash_password(user_data.password),
-    )
+    try:
+        save_pending_user(
+            user_data.firstName,
+            user_data.lastName,
+            email,
+            username,
+            hash_password(user_data.password),
+        )
+    except ValueError as exc:
+        return {"error": str(exc)}
 
     try:
         send_verification_mail(email)
@@ -295,8 +298,9 @@ def update_profile(
     if not username:
         return {"error": "Username cannot be empty."}
 
-    existing_username = get_user_by_username(username)
-    if existing_username and existing_username["id"] != user_id:
+    # Verified users keep their own name; pending registrations also reserve
+    # theirs so a promotion can never collide later.
+    if username_in_use(username, exclude_user_id=user_id):
         return {"error": "Username already taken."}
 
     update_user_profile(
@@ -554,7 +558,13 @@ def verify_otp(email: str, otp: str) -> Dict[str, str]:
     # valid and the user can retry instead of having to register again.
     try:
         move_pending_user_to_users(email)
-    except ValueError:
+    except ValueError as exc:
+        if "Username already in use" in str(exc):
+            # The staged row can never be promoted; free the email so the
+            # user can register again with a different username.
+            delete_pending_user(email)
+            clear_otp(email)
+            return {"error": str(exc)}
         return {"error": "No registration found for this email."}
     except Exception:
         logger.exception("Could not promote pending user %s", email)

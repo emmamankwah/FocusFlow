@@ -9,7 +9,11 @@ sys.path.insert(0, str(backend_dir))
 
 from fastapi.testclient import TestClient
 
-from app.authentication.repository.authentication.user_repo import create_user
+from app.authentication.repository.authentication.user_repo import (
+    create_user,
+    get_pending_user,
+    get_user_otp,
+)
 from app.authentication.security.secure_users import hash_password
 from app.authentication.service.auth_service import service_users
 from app.authentication.settings.db import database_connection
@@ -340,7 +344,7 @@ class AuthFlowTests(unittest.TestCase):
         self.emails.append(new_email)
         response = self._request_email_change(headers, new_email, "Wrong!Pass1")
 
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, 403)
         self.assertEqual(
             response.json().get("error"),
             "Current password is incorrect.",
@@ -539,7 +543,7 @@ class AuthFlowTests(unittest.TestCase):
             "/auth/verify-otp",
             json={"email": email, "otp": wrong},
         )
-        self.assertEqual(rejected.status_code, 200)
+        self.assertEqual(rejected.status_code, 400)
         self.assertIn("Invalid code", rejected.json()["error"])
 
         accepted = self.client.post(
@@ -574,7 +578,6 @@ class AuthFlowTests(unittest.TestCase):
             "Username already taken.",
         )
 
-    @unittest.expectedFailure
     def test_register_rejects_username_held_by_pending_registration(self):
         _, username, first = self._register()
         self.assertEqual(first.status_code, 200)
@@ -585,11 +588,60 @@ class AuthFlowTests(unittest.TestCase):
             "/auth/register",
             json=_payload(second_email, username),
         )
-        self.assertEqual(second.status_code, 200)
+        self.assertEqual(second.status_code, 409)
         self.assertEqual(
             second.json().get("error"),
             "Username already taken.",
         )
+
+    def test_profile_update_rejects_pending_username(self):
+        email, username = self._verified_user()
+        headers = self._headers(self._login(email)["access_token"])
+
+        pending_email, pending_username, pending = self._register()
+        self.assertNotIn("error", pending.json())
+
+        updated = self.client.put(
+            "/auth/profile",
+            headers=headers,
+            json={
+                "firstName": "Ada",
+                "lastName": "Lovelace",
+                "username": pending_username,
+            },
+        )
+        self.assertEqual(updated.status_code, 409)
+        self.assertEqual(
+            updated.json().get("error"),
+            "Username already taken.",
+        )
+        self.assertEqual(
+            self.client.get("/auth/profile", headers=headers).json()["username"],
+            username,
+        )
+
+    def test_verification_username_collision_recovers(self):
+        email, username, _ = self._register()
+        otp = self._otp(email)
+
+        collision_email = _email()
+        self.emails.append(collision_email)
+        create_user(
+            "Collision", "User", collision_email, username, hash_password(PASSWORD)
+        )
+
+        verified = self.client.post(
+            "/auth/verify-otp",
+            json={"email": email, "otp": otp},
+        )
+        self.assertEqual(verified.status_code, 409)
+        self.assertEqual(
+            verified.json().get("error"),
+            "Username already in use. Please register again.",
+        )
+
+        self.assertIsNone(get_pending_user(email))
+        self.assertIsNone(get_user_otp(email))
 
     def test_register_rejects_whitespace_in_username(self):
         for username in ("   ", "ada lovelace", "ada\tlovelace"):

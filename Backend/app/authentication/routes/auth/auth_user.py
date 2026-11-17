@@ -53,10 +53,11 @@ def _auth_response(result: dict):
         status_code = 409
     elif "not found" in message or "no registration" in message:
         status_code = 404
-    elif (
-        "invalid email or password" in message
-        or "current password is incorrect" in message
-    ):
+    elif "current password is incorrect" in message:
+        # The Bearer token is still valid, so this is authorization, not
+        # authentication. A 401 here would make clients discard the session.
+        status_code = 403
+    elif "invalid email or password" in message:
         status_code = 401
     else:
         status_code = 400
