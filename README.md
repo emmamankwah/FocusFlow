@@ -1,5 +1,39 @@
 # FocusFlow AI
 
+## Run the full project with Docker
+
+Docker Compose starts the Vite frontend, FastAPI backend, PostgreSQL with
+pgvector, and Redis. Install Docker Desktop (or Docker Engine with the Compose
+plugin), then from the repository root:
+
+```powershell
+Copy-Item .env.example .env
+```
+
+Edit `.env` and replace `JWT_SECRET` with a long random value. You can generate
+one with `python -c "import secrets; print(secrets.token_urlsafe(48))"`. Then
+start the stack:
+
+```powershell
+docker compose up --build
+```
+
+Open the app at <http://localhost:3000>. The API is at <http://localhost:8000>
+and its health endpoint is <http://localhost:8000/health>. Stop the stack with
+`Ctrl+C`; run `docker compose down` to stop and remove its containers. To also
+delete the local database, Redis data, and model cache, run
+`docker compose down --volumes`.
+
+The database schema is loaded automatically the first time the PostgreSQL data
+volume is created. Optional AI chat needs `OPENAI_API_KEY` (and, when applicable,
+`OPENAI_BASE_URL`) in `.env`. Registration email needs the SMTP/Gmail values in
+`.env`. Without those integrations, the rest of the local stack can still run.
+
+The Compose file is intended for local development: source folders are mounted
+for live reload, and the ports are published on the host. Change the example
+credentials and configure production secrets and deployment networking before
+using an exposed deployment.
+
 An intelligent productivity platform that helps students and professionals organize, prioritize, and complete their work efficiently.
 
 Unlike traditional task management applications, FocusFlow AI does not simply store tasks. It actively analyzes deadlines, workload, user habits, available time, and task importance to continuously generate the most effective schedule. The platform behaves like a personal productivity coach that adapts to the user's behavior over time.
