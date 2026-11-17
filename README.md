@@ -30,7 +30,10 @@ volume is created. Optional AI chat needs `OPENAI_API_KEY` (and, when applicable
 `.env`. Without those integrations, the rest of the local stack can still run.
 
 The Compose file is intended for local development, and the ports are published
-on the host. Source files are packaged into their images, so rebuild after
+on the host. The Docker PostgreSQL container is published on host port `5433`
+(user `focusflow`, database `focusflow`) to avoid clashing with a native
+PostgreSQL installation that may occupy `5432`; connect host tools to
+`localhost:5433`. Source files are packaged into their images, so rebuild after
 changing frontend or backend files with `docker compose up --build -d`. Change
 the example credentials and configure production secrets and deployment
 networking before using an exposed deployment.
