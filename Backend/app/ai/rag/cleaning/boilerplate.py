@@ -1,4 +1,4 @@
-"""Strip headers, footers and other boilerplate from extracted text."""
+"""Strip page numbers, repeated headers/footers and common notices."""
 
 from __future__ import annotations
 
@@ -13,11 +13,11 @@ _PAGE_NUMBER = re.compile(
     re.IGNORECASE,
 )
 _PAGE_NUMBER_ORNAMENT = re.compile(
-    r"^\s*[-–—\s]*\d+[-–—\s]*$",
+    r"^\s*[-\u2013\u2014\s]*\d+[-\u2013\u2014\s]*$",
 )
 
 _KNOWN_PATTERNS = [
-    re.compile(r"^\s*©.*$", re.IGNORECASE),
+    re.compile(r"^\s*\u00a9.*$", re.IGNORECASE),
     re.compile(r"^\s*copyright\b.*$", re.IGNORECASE),
     re.compile(r"^\s*all rights reserved\.?\s*$", re.IGNORECASE),
     re.compile(r"^\s*confidential\b.*$", re.IGNORECASE),
@@ -29,16 +29,36 @@ _KNOWN_PATTERNS = [
     ),
 ]
 
+_URL_OR_DOMAIN = re.compile(
+    r"^\s*(?:https?://|www\.)\S+|^\s*[\w.-]+\.(?:com|org|net|edu|gov)\b",
+    re.IGNORECASE,
+)
+
 
 def is_page_number(line: str) -> bool:
-    """Return True when a line is just a page number (``Page 3``, ``3 of 9``)."""
+    """Return True for page labels such as ``Page 3`` or ``3 of 9``."""
     stripped = line.strip()
-    return bool(_PAGE_NUMBER.match(stripped) or _PAGE_NUMBER_ORNAMENT.match(stripped))
+    return bool(
+        _PAGE_NUMBER.match(stripped)
+        or _PAGE_NUMBER_ORNAMENT.match(stripped)
+    )
 
 
 def is_known_boilerplate(line: str) -> bool:
-    """Return True when a line matches a common copyright/confidential notice."""
+    """Return True for common copyright, confidentiality and print notices."""
     return any(pattern.match(line) for pattern in _KNOWN_PATTERNS)
+
+
+def _looks_like_repeated_header_or_footer(line: str) -> bool:
+    """Avoid dropping repeated prose; only infer likely header-like lines."""
+    stripped = line.strip()
+    words = stripped.split()
+    multword_uppercase = (
+        len(words) >= 2
+        and any(character.isalpha() for character in stripped)
+        and stripped == stripped.upper()
+    )
+    return multword_uppercase or bool(_URL_OR_DOMAIN.match(stripped))
 
 
 def repeated_lines(
@@ -46,12 +66,16 @@ def repeated_lines(
     min_repeats: int = MIN_REPEATS,
     max_line_chars: int = MAX_BOILERPLATE_LINE,
 ) -> set[str]:
-    """Return short lines that repeat often enough to be headers or footers."""
+    """Find short, repeated lines that resemble headers or footers."""
     counts = Counter(line.strip() for line in text.split("\n") if line.strip())
     return {
         line
         for line, count in counts.items()
-        if count >= min_repeats and len(line) <= max_line_chars
+        if (
+            count >= min_repeats
+            and len(line) <= max_line_chars
+            and _looks_like_repeated_header_or_footer(line)
+        )
     }
 
 
@@ -60,7 +84,7 @@ def remove_boilerplate(
     min_repeats: int = MIN_REPEATS,
     max_line_chars: int = MAX_BOILERPLATE_LINE,
 ) -> str:
-    """Drop page numbers, repeated headers/footers and standard notices."""
+    """Drop page numbers, likely repeated headers/footers and known notices."""
     if not text:
         return ""
 
