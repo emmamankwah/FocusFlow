@@ -1,58 +1,75 @@
-"""Reconstruct paragraphs from hard-wrapped text."""
-
-from __future__ import annotations
-
 import re
 
-_PARAGRAPH_BREAK = re.compile(r"\n\s*\n")
-_HORIZONTAL_SPACE = re.compile(r"[^\S\n]+")
-_LIST_ITEM = re.compile(r"^\s*(?:[-*+•]|\d+[.)])\s+")
-_HEADING = re.compile(r"^\s{0,3}#{1,6}\s+")
-_FENCE = re.compile(r"^\s*(?:```|~~~)")
+
+def is_heading(line: str) -> bool:
+    """
+    Basic heading detection.
+    """
+
+    line = line.strip()
+
+    if not line:
+        return False
+
+    # Numbered headings: 1. Introduction
+    if re.match(r"^\d+(\.\d+)*\.?\s+\S+", line):
+        return True
+
+    # Short uppercase headings
+    if line.isupper() and len(line) < 100:
+        return True
+
+    return False
 
 
-def _is_structural(line: str) -> bool:
-    return bool(_LIST_ITEM.match(line) or _HEADING.match(line) or _FENCE.match(line))
+def is_list_item(line: str) -> bool:
+    """
+    Detect common list markers.
+    """
+
+    return bool(
+        re.match(
+            r"^\s*(?:[-*•]|\d+[.)]|[a-zA-Z][.)])\s+",
+            line
+        )
+    )
 
 
 def reconstruct_paragraphs(text: str) -> str:
-    """Join wrapped lines inside a paragraph while keeping structure."""
-    if not text:
-        return ""
+    """
+    Join wrapped lines within paragraphs.
 
-    paragraphs: list[str] = []
+    Preserves blank lines, headings and list items.
+    """
 
-    for block in _PARAGRAPH_BREAK.split(text):
-        lines = [line.rstrip() for line in block.splitlines() if line.strip()]
-        if not lines:
+    lines = text.splitlines()
+
+    paragraphs = []
+    current_paragraph = []
+
+    def flush():
+        if current_paragraph:
+            paragraphs.append(
+                " ".join(current_paragraph)
+            )
+            current_paragraph.clear()
+
+    for line in lines:
+
+        line = line.strip()
+
+        if not line:
+            flush()
             continue
 
-        output: list[str] = []
-        in_fence = False
+        if is_heading(line) or is_list_item(line):
 
-        for raw_line in lines:
-            stripped = raw_line.strip()
-            if _FENCE.match(stripped):
-                output.append(raw_line)
-                in_fence = not in_fence
-                continue
-            if in_fence:
-                output.append(raw_line)
-                continue
-            if not output:
-                output.append(raw_line)
-                continue
-            if _is_structural(stripped):
-                output.append(raw_line)
-                continue
-            previous = output[-1]
-            if _HEADING.match(previous) or _FENCE.match(previous):
-                output.append(raw_line)
-                continue
-            output[-1] = _HORIZONTAL_SPACE.sub(
-                " ", f"{previous} {stripped}"
-            ).strip()
+            flush()
+            paragraphs.append(line)
+            continue
 
-        paragraphs.append("\n".join(output))
+        current_paragraph.append(line)
+
+    flush()
 
     return "\n\n".join(paragraphs)
