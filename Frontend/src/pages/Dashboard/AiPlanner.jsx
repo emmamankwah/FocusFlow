@@ -18,7 +18,7 @@ import {
   userInitials,
 } from '../Dashboard/data.js'
 import { buildPlannerContext, sendPlannerMessage } from '@/lib/ai'
-import { getSessionUser } from '@/lib/mockAuth'
+import { getSessionUser } from '@/lib/auth'
 import { useTheme } from '@/lib/theme'
 import {
   BrandMark,

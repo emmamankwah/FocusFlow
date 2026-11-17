@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import usePageTitle from '@/lib/usePageTitle'
 import { buildPlannerContext, sendPlannerMessage } from '@/lib/ai'
-import { getSessionUser, logout } from '@/lib/mockAuth'
+import { getSessionUser, logout } from '@/lib/auth'
 import { useTheme } from '@/lib/theme'
 import './dashboard.css'
 import {
