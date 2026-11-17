@@ -45,7 +45,7 @@ from app.authentication.repository.authentication.user_repo import (
     update_user_password_by_id,
     update_user_profile,
 )
-from app.authentication.security.rate_limit import SlidingWindowLimiter
+from app.authentication.security.rate_limit import RedisSlidingWindowLimiter
 from app.authentication.security.secure_users import (
     hash_password,
     verify_password,
@@ -75,19 +75,19 @@ OTP_SEND_WINDOW_SECONDS = 15 * 60
 OTP_FAILED_LIMIT = 10
 OTP_FAILED_WINDOW_SECONDS = 15 * 60
 
-otp_send_limiter = SlidingWindowLimiter(
+otp_send_limiter = RedisSlidingWindowLimiter(
     "otp-send",
     ((1, OTP_SEND_COOLDOWN_SECONDS), (OTP_SEND_LIMIT, OTP_SEND_WINDOW_SECONDS)),
 )
-otp_verify_limiter = SlidingWindowLimiter(
+otp_verify_limiter = RedisSlidingWindowLimiter(
     "otp-verify",
     ((OTP_FAILED_LIMIT, OTP_FAILED_WINDOW_SECONDS),),
 )
-email_change_send_limiter = SlidingWindowLimiter(
+email_change_send_limiter = RedisSlidingWindowLimiter(
     "email-change-send",
     ((1, OTP_SEND_COOLDOWN_SECONDS), (OTP_SEND_LIMIT, OTP_SEND_WINDOW_SECONDS)),
 )
-email_change_verify_limiter = SlidingWindowLimiter(
+email_change_verify_limiter = RedisSlidingWindowLimiter(
     "email-change-verify",
     ((OTP_FAILED_LIMIT, OTP_FAILED_WINDOW_SECONDS),),
 )

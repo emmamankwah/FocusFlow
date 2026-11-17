@@ -1,11 +1,7 @@
-"""Authentication routes.
-
-The service layer reports failures as ``{"error": "..."}`` with HTTP 200, so
-these handlers simply pass the model straight through. Profile and password
-routes also require a Bearer token and return 401 when it is missing or invalid.
-"""
+"""Authentication routes and HTTP status mapping for service results."""
 
 from fastapi import APIRouter, Depends
+from fastapi.responses import JSONResponse
 
 from app.authentication.model.user import (
     ChangePassword,
@@ -39,44 +35,75 @@ from app.authentication.service.auth_service.service_users import (
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
+def _auth_response(result: dict):
+    """Keep service error bodies stable while returning an appropriate status."""
+    error = result.get("error")
+    if not error:
+        return result
+
+    message = error.lower()
+    if "too many" in message:
+        status_code = 429
+    elif "could not" in message or "unavailable" in message:
+        status_code = 503
+    elif any(
+        term in message
+        for term in ("already registered", "already taken", "already in use")
+    ):
+        status_code = 409
+    elif "not found" in message or "no registration" in message:
+        status_code = 404
+    elif (
+        "invalid email or password" in message
+        or "current password is incorrect" in message
+    ):
+        status_code = 401
+    else:
+        status_code = 400
+
+    return JSONResponse(status_code=status_code, content=result)
+
+
 @router.post("/register")
 def register(user_data: UserRegister):
-    return register_user(user_data)
+    return _auth_response(register_user(user_data))
 
 
 @router.post("/login")
 def login(user: UserLogin):
-    return login_user(user)
+    return _auth_response(login_user(user))
 
 
 @router.post("/verify-otp")
 def verify(payload: OtpVerification):
-    return verify_otp(payload.email, payload.otp)
+    return _auth_response(verify_otp(payload.email, payload.otp))
 
 
 @router.post("/verify-reset-otp")
 def verify_reset(payload: OtpVerification):
-    return verify_reset_otp_user(payload.email, payload.otp)
+    return _auth_response(verify_reset_otp_user(payload.email, payload.otp))
 
 
 @router.post("/resend-otp")
 def resend(payload: OtpResend):
-    return resend_otp(payload.email)
+    return _auth_response(resend_otp(payload.email))
 
 
 @router.post("/forgot-password")
 def forgot_password(payload: OtpRequest):
-    return request_otp(payload.email)
+    return _auth_response(request_otp(payload.email))
 
 
 @router.post("/reset-password")
 def reset(payload: ResetPassword):
-    return reset_password(payload.email, payload.otp, payload.newPassword)
+    return _auth_response(
+        reset_password(payload.email, payload.otp, payload.newPassword)
+    )
 
 
 @router.get("/profile")
 def profile(user_id: int = Depends(get_current_user_id)):
-    return get_profile_user(user_id)
+    return _auth_response(get_profile_user(user_id))
 
 
 @router.put("/profile")
@@ -84,7 +111,7 @@ def update_profile(
     payload: UserProfileUpdate,
     user_id: int = Depends(get_current_user_id),
 ):
-    return update_profile_user(user_id, payload)
+    return _auth_response(update_profile_user(user_id, payload))
 
 
 @router.post("/profile/email")
@@ -92,10 +119,12 @@ def request_email_change(
     payload: EmailChangeRequest,
     user_id: int = Depends(get_current_user_id),
 ):
-    return request_email_change_user(
-        user_id,
-        payload.newEmail,
-        payload.currentPassword,
+    return _auth_response(
+        request_email_change_user(
+            user_id,
+            payload.newEmail,
+            payload.currentPassword,
+        )
     )
 
 
@@ -104,14 +133,14 @@ def verify_email_change(
     payload: EmailChangeVerification,
     user_id: int = Depends(get_current_user_id),
 ):
-    return verify_email_change_user(user_id, payload.otp)
+    return _auth_response(verify_email_change_user(user_id, payload.otp))
 
 
 @router.delete("/profile/email")
 def cancel_email_change(
     user_id: int = Depends(get_current_user_id),
 ):
-    return cancel_email_change_user(user_id)
+    return _auth_response(cancel_email_change_user(user_id))
 
 
 @router.post("/change-password")
@@ -119,8 +148,10 @@ def change_password(
     payload: ChangePassword,
     user_id: int = Depends(get_current_user_id),
 ):
-    return change_password_user(
-        user_id,
-        payload.oldPassword,
-        payload.newPassword,
+    return _auth_response(
+        change_password_user(
+            user_id,
+            payload.oldPassword,
+            payload.newPassword,
+        )
     )

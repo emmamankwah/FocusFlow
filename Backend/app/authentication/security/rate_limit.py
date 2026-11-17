@@ -1,134 +1,108 @@
-"""Thread-safe, in-process sliding-window rate limiting.
-
-The OTP endpoints are synchronous FastAPI handlers, so they run in a worker
-thread; the counters are therefore guarded by a lock.
-
-The store lives in memory: restarting the API clears it and
-``uvicorn --workers N`` gives every worker its own budget. That is enough to
-stop an attacker guessing codes against a single deployment, but move the
-counters to Redis (or a shared table) before scaling horizontally.
-
-Keys are evicted once their hits expire, and the store is capped at
-``max_keys`` so traffic to fresh addresses cannot grow it without bound. An
-evicted key simply starts with a fresh budget.
-"""
+"""Redis-backed sliding-window rate limiting for authentication flows."""
 
 from __future__ import annotations
 
-import threading
-import time
-from collections import deque
-from typing import Callable
+import hashlib
+import os
+import secrets
+from typing import Iterable
 
-Rule = tuple[int, int]  # (max hits, window in seconds)
+import redis
+from redis.exceptions import RedisError
 
 
-class SlidingWindowLimiter:
-    """Allow at most ``limit`` hits per key inside each configured window."""
+class RateLimitUnavailable(RuntimeError):
+    """Raised when Redis cannot enforce an authentication rate limit."""
+
+
+# Evaluate checks and updates atomically so concurrent API workers share one
+# budget. Redis server time keeps workers from disagreeing about timestamps.
+_SLIDING_WINDOW_SCRIPT = """
+local key = KEYS[1]
+local operation = ARGV[1]
+local member = ARGV[2]
+local rule_count = tonumber(ARGV[3])
+
+local time_parts = redis.call('TIME')
+local now = tonumber(time_parts[1]) * 1000 + tonumber(time_parts[2]) / 1000
+local longest_window = 0
+for i = 1, rule_count do
+    local window = tonumber(ARGV[4 + (i - 1) * 2 + 1])
+    if window > longest_window then longest_window = window end
+end
+
+redis.call('ZREMRANGEBYSCORE', key, '-inf', now - longest_window)
+local retry_ms = 0
+for i = 1, rule_count do
+    local limit = tonumber(ARGV[4 + (i - 1) * 2])
+    local window = tonumber(ARGV[4 + (i - 1) * 2 + 1])
+    local lower = now - window
+    local count = redis.call('ZCOUNT', key, '(' .. lower, '+inf')
+    if count >= limit then
+        local blocking = redis.call(
+            'ZRANGEBYSCORE', key, '(' .. lower, '+inf',
+            'WITHSCORES', 'LIMIT', count - limit, 1
+        )
+        if #blocking >= 2 then
+            local wait = tonumber(blocking[2]) + window - now
+            if wait > retry_ms then retry_ms = wait end
+        end
+    end
+end
+
+if retry_ms <= 0 and operation == 'hit' then
+    redis.call('ZADD', key, now, member)
+    redis.call('PEXPIRE', key, longest_window + 1000)
+end
+
+return math.ceil(math.max(0, retry_ms))
+"""
+
+
+class RedisSlidingWindowLimiter:
+    """Allow at most each configured number of hits in its time window."""
 
     def __init__(
         self,
         name: str,
-        rules: tuple[Rule, ...],
-        clock: Callable[[], float] = time.monotonic,
+        rules: Iterable[tuple[int, int]],
         *,
-        max_keys: int = 10_000,
-        sweep_interval: float = 60.0,
+        redis_url: str | None = None,
     ) -> None:
-        if not rules:
-            raise ValueError("At least one rule is required.")
-        if any(
-            not isinstance(limit, int)
-            or not isinstance(window, (int, float))
-            or limit < 1
-            or window <= 0
-            for limit, window in rules
-        ):
-            raise ValueError("Rules must use positive numeric limits and windows.")
-        if max_keys < 1:
-            raise ValueError("max_keys must be at least 1.")
-        if sweep_interval <= 0:
-            raise ValueError("sweep_interval must be positive.")
-
         self.name = name
-        self._rules = rules
-        self._clock = clock
-        self._longest_window = max(window for _, window in rules)
-        self._max_keys = max_keys
-        self._sweep_interval = sweep_interval
-        self._hits: dict[str, deque[float]] = {}
-        self._last_sweep = clock()
-        self._lock = threading.Lock()
+        self.rules = tuple(rules)
+        if not self.rules:
+            raise ValueError("At least one rate limit rule is required.")
+        if any(limit < 1 or window <= 0 for limit, window in self.rules):
+            raise ValueError("Rate limits must use positive limits and windows.")
+
+        self.client = redis.Redis.from_url(
+            redis_url or os.getenv("REDIS_URL", "redis://localhost:6379/0"),
+            socket_connect_timeout=2,
+            socket_timeout=2,
+            health_check_interval=30,
+            decode_responses=True,
+        )
 
     def retry_after(self, key: str) -> float:
-        """Seconds until ``key`` may act again; ``0.0`` means allowed now."""
-        with self._lock:
-            now = self._clock()
-            self._maybe_evict(now)
-            return self._retry_after_locked(key, now)
+        """Return seconds until the key may act again; zero means allowed."""
+        return self._run("check", key)
 
     def hit(self, key: str) -> float:
-        """Record a hit, or return the seconds to wait when already limited.
+        """Record a hit, or return the remaining delay when already limited."""
+        return self._run("hit", key)
 
-        A rejected call is *not* recorded, so repeated attempts cannot push the
-        window forward and starve the caller.
-        """
-        with self._lock:
-            now = self._clock()
-            self._maybe_evict(now)
-            wait = self._retry_after_locked(key, now)
-            if wait:
-                return wait
-            if key not in self._hits:
-                self._make_room()
-            self._hits.setdefault(key, deque()).append(now)
-            return 0.0
+    def _run(self, operation: str, identity: str) -> float:
+        digest = hashlib.sha256(identity.encode("utf-8")).hexdigest()
+        redis_key = f"focusflow:auth:rate-limit:{self.name}:{digest}"
+        args: list[str | int] = [operation, secrets.token_hex(16), len(self.rules)]
+        for limit, window_seconds in self.rules:
+            args.extend((limit, window_seconds * 1000))
 
-    def _make_room(self) -> None:
-        """Keep the store at or below ``max_keys`` before inserting a new key."""
-        while len(self._hits) >= self._max_keys:
-            del self._hits[next(iter(self._hits))]
-
-    def _maybe_evict(self, now: float) -> None:
-        if (
-            now - self._last_sweep < self._sweep_interval
-            and len(self._hits) <= self._max_keys
-        ):
-            return
-
-        cutoff = now - self._longest_window
-        for key in list(self._hits):
-            hits = self._hits[key]
-            while hits and hits[0] <= cutoff:
-                hits.popleft()
-            if not hits:
-                del self._hits[key]
-
-        # A burst of unique keys can outpace expiry. Drop the oldest keys to
-        # keep memory bounded; they get a fresh budget if they come back.
-        while len(self._hits) > self._max_keys:
-            del self._hits[next(iter(self._hits))]
-
-        self._last_sweep = now
-
-    def _retry_after_locked(self, key: str, now: float) -> float:
-        hits = self._hits.get(key)
-        if not hits:
-            return 0.0
-
-        # Discard entries that no rule can see any more.
-        cutoff = now - self._longest_window
-        while hits and hits[0] <= cutoff:
-            hits.popleft()
-        if not hits:
-            del self._hits[key]
-            return 0.0
-
-        wait = 0.0
-        for limit, window in self._rules:
-            inside = [stamp for stamp in hits if now - stamp < window]
-            if len(inside) >= limit:
-                # The key frees up once the oldest blocking hit leaves.
-                blocking = inside[-limit]
-                wait = max(wait, window - (now - blocking))
-        return wait
+        try:
+            retry_ms = self.client.eval(_SLIDING_WINDOW_SCRIPT, 1, redis_key, *args)
+        except RedisError as exc:
+            raise RateLimitUnavailable(
+                "Authentication rate limiting is unavailable."
+            ) from exc
+        return float(retry_ms) / 1000

@@ -6,12 +6,14 @@ from pathlib import Path
 from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from app.ai.chatbot.app import router as ai_router
 from app.ai.rag import config as rag_config
 from app.ai.rag import embeddings as rag_embeddings
 from app.ai.rag.routes.rag import router as rag_router
 from app.authentication.routes.auth.auth_user import router as auth_router
+from app.authentication.security.rate_limit import RateLimitUnavailable
 
 load_dotenv(Path(__file__).resolve().parent / ".env")
 
@@ -38,6 +40,14 @@ CORS_ORIGINS = [
 ]
 
 app = FastAPI(title=APP_NAME, lifespan=lifespan)
+
+
+@app.exception_handler(RateLimitUnavailable)
+async def rate_limit_unavailable_handler(_request, exc: RateLimitUnavailable):
+    return JSONResponse(
+        status_code=503,
+        content={"error": str(exc)},
+    )
 
 app.add_middleware(
     CORSMiddleware,
