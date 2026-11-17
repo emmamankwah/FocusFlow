@@ -1,11 +1,10 @@
 fastapi
-uvicorn
+uvicorn[standard]
 python-dotenv
 openai
 google-api-python-client
 google-auth-httplib2
 google-auth-oauthlib
-pyotp
 python-jose[cryptography]
 passlib[argon2]
 psycopg2-binary
@@ -14,6 +13,7 @@ fastembed
 pypdf
 python-docx
 python-multipart
-# OCR requires the Tesseract binary installed on the host.
+httpx
+# OCR also requires the Tesseract executable installed on the host.
 pytesseract
 Pillow
