@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { emailRules } from '@/lib/validation'
 import usePageTitle from '@/lib/usePageTitle'
-import { login, setPendingEmail } from '@/lib/mockAuth'
+import { getPendingEmail, login } from '@/lib/authApi'
 import AuthLayout from '@/components/AuthLayout'
 import TextField from '@/components/TextField'
 import Checkbox from '@/components/Checkbox'
@@ -33,8 +33,7 @@ export default function Login() {
       await login(data)
       navigate(state?.from || '/dashboard', { replace: true })
     } catch (err) {
-      if (err.code === 'unverified') {
-        setPendingEmail(err.email)
+      if (getPendingEmail() === data.email.trim()) {
         navigate('/verify-email', { replace: true })
         return
       }
@@ -64,6 +63,12 @@ export default function Login() {
           className="rounded-xl border border-[#2fa86a]/25 bg-[#2fa86a]/10 px-3.5 py-2.5 text-[0.82rem] font-medium text-[#1d7a4c]"
         >
           Password updated. Log in with your new password.
+        </p>
+      )}
+
+      {state?.verified && (
+        <p role="status" className="rounded-xl border border-[#2fa86a]/25 bg-[#2fa86a]/10 px-3.5 py-2.5 text-[0.82rem] font-medium text-[#1d7a4c]">
+          Email verified. Log in to continue.
         </p>
       )}
 

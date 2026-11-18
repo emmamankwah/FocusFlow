@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form'
 import { Link, useNavigate } from 'react-router-dom'
 import { emailRules } from '@/lib/validation'
 import usePageTitle from '@/lib/usePageTitle'
-import { requestPasswordReset } from '@/lib/mockAuth'
+import { requestPasswordReset } from '@/lib/authApi'
 import AuthLayout from '@/components/AuthLayout'
 import TextField from '@/components/TextField'
 import SubmitButton from '@/components/SubmitButton'
@@ -27,7 +27,7 @@ export default function ForgotPassword() {
       const { email } = await requestPasswordReset(data.email)
       setSentTo(email)
     } catch (err) {
-      setApiError(err.message || 'Could not send the reset link.')
+      setApiError(err.message || 'Could not send the reset code.')
     }
   }
 
@@ -36,9 +36,9 @@ export default function ForgotPassword() {
       <AuthLayout
         eyebrow="Check your inbox"
         title="Check your inbox"
-        subtitle={`If an account exists for ${sentTo}, a reset link is on its way.`}
+        subtitle={`If an account exists for ${sentTo}, a reset code is on its way.`}
         brandTitle="Back in a minute"
-        brandLead="The link works for 30 minutes. If nothing arrives, check your spam folder."
+        brandLead="Enter the one-time code from your email on the next screen."
         footer={
           <>
             Remember your password?{' '}
@@ -51,8 +51,7 @@ export default function ForgotPassword() {
         <div className="space-y-4">
           <div className="rounded-xl border border-cobalt/15 bg-cobalt/5 px-4 py-3.5 text-[0.84rem] leading-relaxed text-inkwell/75">
             <p>
-              This is a preview, so no email is sent. Open the reset link below to set a new
-              password.
+              If that account exists, a one-time password reset code has been sent. Enter it with your new password on the next screen.
             </p>
           </div>
 
@@ -61,7 +60,7 @@ export default function ForgotPassword() {
             onClick={() => navigate('/reset-password')}
             className="group inline-flex h-12 w-full items-center justify-center gap-2.5 rounded-xl bg-cobalt px-5 text-[0.95rem] font-semibold text-white shadow-[0_18px_36px_-20px_rgba(47,69,255,0.85)] transition-all duration-200 hover:-translate-y-px hover:bg-[#2438e6]"
           >
-            Open reset link
+            Enter reset code
             <svg
               viewBox="0 0 16 16"
               className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5"
@@ -92,9 +91,9 @@ export default function ForgotPassword() {
     <AuthLayout
       eyebrow="Account recovery"
       title="Forgot password?"
-      subtitle="Enter your email and we'll send you a reset link."
+      subtitle="Enter your email and we'll send a password reset code."
       brandTitle="Locked out?"
-      brandLead="A reset link gets you back to your plan in under a minute."
+      brandLead="A reset code gets you back to your plan in under a minute."
       footer={
         <>
           Remember your password?{' '}
@@ -118,7 +117,7 @@ export default function ForgotPassword() {
         <FormError message={apiError} />
 
         <SubmitButton loading={isSubmitting} loadingText="Sending link...">
-          Send reset link
+          Send reset code
         </SubmitButton>
       </form>
     </AuthLayout>

@@ -1,6 +1,6 @@
 // Shared react-hook-form rules. Password policy mirrors the live checklist in
-// `components/PasswordChecklist.jsx`: 8+ characters, an uppercase letter, a
-// number and a symbol.
+// `components/PasswordChecklist.jsx`: 8+ characters, uppercase and lowercase
+// letters, a number and a symbol (matching the backend password policy).
 
 export const emailRules = {
   required: 'Enter your email address.',
@@ -28,6 +28,7 @@ export const passwordRules = {
     if (!value) return true
     const missing = []
     if (!/[A-Z]/.test(value)) missing.push('an uppercase letter')
+    if (!/[a-z]/.test(value)) missing.push('a lowercase letter')
     if (!/\d/.test(value)) missing.push('a number')
     if (!/[^A-Za-z0-9]/.test(value)) missing.push('a symbol')
     if (!missing.length) return true
@@ -46,4 +47,4 @@ export const confirmPasswordRules = {
     value === values.password || 'Passwords do not match.',
 }
 
-export const PASSWORD_HINT = '8+ characters with an uppercase letter, a number and a symbol.'
+export const PASSWORD_HINT = '8+ characters with uppercase and lowercase letters, a number and a symbol.'

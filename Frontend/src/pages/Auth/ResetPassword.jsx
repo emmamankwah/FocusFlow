@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { confirmPasswordRules, passwordRules } from '@/lib/validation'
 import usePageTitle from '@/lib/usePageTitle'
-import { getResetContext, resetPassword } from '@/lib/mockAuth'
+import { getResetContext, resetPassword } from '@/lib/authApi'
 import AuthLayout from '@/components/AuthLayout'
 import TextField from '@/components/TextField'
 import SubmitButton from '@/components/SubmitButton'
@@ -23,18 +23,18 @@ export default function ResetPassword() {
     handleSubmit,
     watch,
     formState: { errors, isSubmitting },
-  } = useForm({ defaultValues: { password: '', confirmPassword: '' } })
+  } = useForm({ defaultValues: { otp: '', password: '', confirmPassword: '' } })
 
   const password = watch('password')
 
-  if (!context.email || !context.token) {
+  if (!context.email) {
     return <Navigate to="/forgot-password" replace />
   }
 
   const onSubmit = async (data) => {
     setApiError(null)
     try {
-      await resetPassword({ email: context.email, password: data.password })
+      await resetPassword({ email: context.email, otp: data.otp, password: data.password })
       navigate('/login', { replace: true, state: { reset: true } })
     } catch (err) {
       setApiError(err.message || 'Could not reset your password.')
@@ -58,6 +58,14 @@ export default function ResetPassword() {
       }
     >
       <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-4">
+        <TextField
+          id="otp"
+          label="Reset code"
+          placeholder="6-digit code"
+          autoComplete="one-time-code"
+          error={errors.otp}
+          registration={register('otp', { required: 'Enter the code from your email.' })}
+        />
         <div>
           <TextField
             id="password"

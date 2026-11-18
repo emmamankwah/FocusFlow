@@ -1,11 +1,12 @@
 const RULES = [
   { key: 'length', label: '8+ characters', test: (value) => value.length >= 8 },
   { key: 'upper', label: 'An uppercase letter', test: (value) => /[A-Z]/.test(value) },
+  { key: 'lower', label: 'A lowercase letter', test: (value) => /[a-z]/.test(value) },
   { key: 'number', label: 'A number', test: (value) => /\d/.test(value) },
   { key: 'symbol', label: 'A symbol', test: (value) => /[^A-Za-z0-9]/.test(value) },
 ]
 
-const COLORS = ['bg-rose', 'bg-blush', 'bg-lilac', 'bg-[#2fa86a]']
+const COLORS = ['bg-rose', 'bg-blush', 'bg-lilac', 'bg-cyan', 'bg-[#2fa86a]']
 
 export default function PasswordChecklist({ value = '', id = 'password-rules' }) {
   const score = RULES.filter((rule) => rule.test(value)).length
@@ -52,7 +53,7 @@ export default function PasswordChecklist({ value = '', id = 'password-rules' })
       </ul>
 
       <p className="sr-only" aria-live="polite">
-        {value ? `${score} of 4 password requirements met.` : ''}
+        {value ? `${score} of 5 password requirements met.` : ''}
       </p>
     </div>
   )
