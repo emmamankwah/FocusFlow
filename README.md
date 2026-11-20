@@ -1,43 +1,250 @@
 ﻿# FocusFlow AI
 
-FocusFlow AI is a productivity platform for students and professionals. It aims to help people organize work, decide what matters next, and build schedules that adapt as deadlines and workloads change.
+An intelligent productivity platform that helps students and professionals organize, prioritize, and complete their work efficiently.
 
-## Why FocusFlow
+Unlike traditional task management applications, FocusFlow AI does not simply store tasks. It actively analyzes deadlines, workload, user habits, available time, and task importance to continuously generate the most effective schedule. The platform behaves like a personal productivity coach that adapts to the user's behavior over time.
 
-Traditional task managers store tasks but leave prioritization and replanning to the user. FocusFlow is designed to consider deadlines, effort, availability, and past progress so people can make steady progress without becoming overwhelmed.
+## Table of Contents
 
-## What Works Today
+- [Problem Statement](#problem-statement)
+- [Vision](#vision)
+- [Target Audience](#target-audience)
+- [Core Objectives](#core-objectives)
+- [User Roles](#user-roles)
+- [Features](#features)
+- [Technology Stack](#technology-stack)
+- [Long-Term Vision](#long-term-vision)
 
-- **Account access:** Email and password registration and login, email verification, password reset, and profile management.
-- **Dashboard preview:** A task list, focus timer, workload insights, and planner interface. Dashboard tasks and metrics are demo data stored in the browser; they are not persisted to the backend.
-- **AI chat:** Authenticated chat using an OpenAI-compatible API. The planner context currently comes from the client-side demo dashboard, not saved task or schedule data.
-- **Document Q&A:** Upload or enter documents, retrieve relevant passages, and ask questions grounded in them. The backend supports PDF and Word files, plus image OCR when Tesseract is installed.
+## Problem Statement
 
-## Product Vision
+Most productivity applications require users to manually organize and prioritize their work. When deadlines change or users fall behind, these applications simply display overdue tasks without offering meaningful assistance. As a result:
 
-FocusFlow aims to become a personal productivity coach that helps users organize tasks, balance workloads, and adjust plans as circumstances change. The long-term goal is to generate useful schedules from deadlines, task effort, availability, and completion history.
+- Important deadlines are missed.
+- Users become overwhelmed.
+- Poor prioritization causes unnecessary stress.
+- Study and work efficiency decreases.
 
-### Planned Features
+FocusFlow AI aims to solve these problems through intelligent planning and automatic schedule optimization.
 
-These are product goals, not currently backed by persistent planner services:
+## Vision
 
-- Persisted task, availability, calendar, schedule, and completion-history data.
-- A scheduling engine that avoids conflicts and recalculates future work when plans change.
-- Planner chat grounded in server-stored user tasks and schedules.
-- Calendar views, task attachments, and real notification delivery.
-- Analytics and risk insights based on a user's actual history.
-- Adaptive workload recommendations based on observed patterns.
-- Admin tools, roles, and reporting.
+To build an AI-powered productivity operating system that thinks, plans, adapts, and guides users toward completing their goals instead of simply reminding them about deadlines.
 
-Google sign-in is shown in the login interface but is not connected. Refresh-token sessions are not implemented. Two-factor authentication and collaboration remain future ideas.
+## Target Audience
+
+**Primary**
+- University students
+- College students
+- High school students
+
+**Secondary**
+- Software developers
+- Remote workers
+- Freelancers
+- Researchers
+- Teams
+- Entrepreneurs
+
+## Core Objectives
+
+The platform should:
+
+- Organize tasks automatically.
+- Calculate optimal schedules.
+- Detect workload imbalance.
+- Predict possible deadline failures.
+- Recommend better study habits.
+- Learn user productivity patterns.
+- Provide personalized AI coaching.
+- Continuously reorganize schedules.
+
+## User Roles
+
+### Guest
+- Visit homepage
+- Read product information
+- Register
+- Login
+
+### User
+- Dashboard
+- Task management
+- Calendar
+- AI planner
+- Notifications
+- AI chatbot
+- Reports
+- Profile management
+- Productivity analytics
+
+### Admin
+- Manage users
+- Manage reports
+- Moderate content
+- View analytics
+- Manage announcements
+- Configure AI settings
+- System monitoring
+
+### Authentication
+- Email & Password
+- Google OAuth
+- Password Reset
+- Email Verification
+- JWT Authentication
+- Refresh Tokens
+- Session Management
+- Two-Factor Authentication *(future)*
+
+## Features
+
+### Dashboard
+- Today's schedule
+- Upcoming deadlines
+- Completed tasks
+- AI recommendations
+- Productivity score
+- Focus timer
+- Weekly overview
+- Daily motivation
+
+### Task Management
+Users can:
+- Create, edit, delete, duplicate, and archive tasks
+- Mark tasks complete
+- Add subtasks and notes
+- Attach files
+- Set estimated duration
+- Set difficulty and importance levels
+- Choose categories
+- Add recurrence
+
+### Calendar
+- Monthly, weekly, and daily agenda views
+- Drag-and-drop scheduling
+- Deadline visualization
+- Time blocking
+- AI-generated study sessions
+
+### Intelligent Scheduling Engine
+
+This is the heart of the application. Instead of using static task lists, the scheduling engine continuously evaluates:
+
+- Deadline proximity
+- Task importance
+- Estimated duration
+- User availability
+- Previous completion history
+- Missed tasks
+- Course weight
+- Energy level *(future)*
+- Calendar conflicts
+
+Whenever changes occur, the engine recalculates the schedule automatically.
+
+### AI Planner
+
+The AI planner acts as a productivity strategist. Examples:
+
+> "I have 5 assignments due next week."
+> "What should I work on today?"
+> "I only have three hours tonight."
+
+The planner generates optimized recommendations.
+
+### AI Chat Assistant
+
+Users can ask:
+
+> "What should I study tonight?"
+> "Am I likely to finish everything?"
+> "I have football tomorrow. Rearrange my schedule."
+> "I feel overwhelmed."
+
+The AI responds using current deadlines, calendar events, task history, and user preferences.
+
+### Smart Notifications
+
+Instead of generic reminders, the platform generates intelligent alerts:
+
+> "You've postponed this assignment three times."
+> "If you start now, you'll finish before Friday."
+> "You're currently ahead of schedule."
+> "Completing this task today gives you a free Saturday."
+
+Notifications are delivered through:
+- In-app notifications
+- Email
+- Browser push notifications
+- Mobile push notifications *(future)*
+
+### Adaptive Workload Engine
+
+The system learns user behavior over time:
+
+- Usually studies better in the morning.
+- Completes coding tasks slower than reading tasks.
+- Rarely studies on Wednesdays.
+- Frequently misses evening schedules.
+
+Future schedules automatically adapt to these patterns.
+
+### Productivity Analytics
+
+Reports include:
+- Weekly productivity
+- Completion rate
+- Focus time
+- Average study duration
+- Missed deadlines
+- Subject progress
+- Time distribution
+- Productivity trends
+
+### Achievement System
+
+Gamify productivity:
+- 7-Day Streak
+- Assignment Master
+- Early Bird
+- Consistency Champion
+- Deadline Crusher
+- Night Owl
+- Focus Hero
+
+### AI Risk Prediction
+
+The system estimates the likelihood of missing upcoming deadlines:
+
+> "You have an 82% chance of missing your Database assignment unless you complete two hours of work today."
+
+### Burnout Detection
+
+The system monitors workload intensity:
+
+> "Your workload has exceeded your normal weekly average. Consider reducing your schedule or taking a break."
+
+### Collaboration *(Future)*
+- Create study groups
+- Share schedules
+- Assign tasks
+- Group projects
+- Team deadlines
+- Shared calendars
+- Shared notes
 
 ## Technology Stack
 
 ### Frontend
+- React
+- JavaScript
+- Tailwind CSS
+- React Router
+- TanStack Query
+- Zustand
+- Framer Motion
+- React Hook Form
 
-- React, JavaScript, and Vite
-- Tailwind CSS and Framer Motion
-- React Router, TanStack Query, Zustand, and React Hook Form
 
 ### Backend
 
@@ -48,12 +255,24 @@ Google sign-in is shown in the login interface but is not connected. Refresh-tok
 - OpenAI-compatible chat API and FastEmbed sentence embeddings
 - PDF and Word extraction, text processing, and image OCR with Tesseract and Pillow
 
+
+
+### AI Layer
+- **Phase 1:** Rule-based scheduling engine
+- **Phase 2:** LLM integration, conversational AI, personalized recommendations
+
+
+
 ## Local Development
 
 Run the frontend and backend as separate services. For backend installation and startup instructions, see [Backend/README.md](Backend/README.md). Install frontend dependencies from `Frontend` with `npm install`, then start Vite with `npm run dev`.
 
 Configure PostgreSQL, Redis, SMTP, and any AI provider credentials through local environment variables. Image OCR also requires the Tesseract executable on the host. The FastEmbed model downloads on first use and is cached locally.
 
+
+
+
+
 ## Long-Term Vision
 
-FocusFlow AI is intended to grow into an intelligent work-planning assistant that combines reliable scheduling, useful progress insights, and personalized coaching for academic and professional goals.
+FocusFlow AI is envisioned as more than a productivity tool. It is an intelligent operating system for personal work management that continuously plans, adapts, and coaches users toward achieving their academic and professional goals through data-driven scheduling, personalized insights, and AI-assisted decision-making.
