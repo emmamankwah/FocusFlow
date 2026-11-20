@@ -1,5 +1,5 @@
 -- Core authentication tables used by the API. These are created before the
--- follow-up schema files when PostgreSQL initializes the Docker volume.
+-- follow-up schema files when PostgreSQL initializes the database.
 CREATE TABLE IF NOT EXISTS users (
     id SERIAL PRIMARY KEY,
     first_name VARCHAR(100) NOT NULL,
