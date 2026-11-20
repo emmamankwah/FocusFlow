@@ -248,12 +248,19 @@ The system monitors workload intensity:
 
 ### Backend
 
-- Python, FastAPI, Uvicorn, and Pydantic
-- PostgreSQL with pgvector for application data and document embeddings
-- Redis for authentication rate limits
-- JWT access tokens, Argon2 password hashing, and SMTP email flows
+- Python
+- FastAPI 
+- sUvicorn
+- Pydantic
+- PostgreSQL 
+- pgvector 
+- Redis 
+- JWT 
+- Argon2
+- SMTP
 - OpenAI-compatible chat API and FastEmbed sentence embeddings
-- PDF and Word extraction, text processing, and image OCR with Tesseract and Pillow
+- Tesseract
+- Pillow
 
 
 
