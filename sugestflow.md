@@ -1,4 +1,4 @@
-# Suggested Backend Workflow
+﻿# Suggested Backend Workflow
 
 ## Current assessment
 
@@ -8,7 +8,7 @@ The backend has a coherent foundation for authentication and document Q&A, but i
 
 - **Authentication:** Registration stages an account until email verification. Password resets and email changes use OTPs, and token versions support invalidating existing access tokens.
 - **Document Q&A:** Documents are uploaded, extracted and cleaned, split into chunks, embedded, stored in PostgreSQL with pgvector, retrieved for a query, and passed to the LLM with source information.
-- **Local development:** Docker Compose starts the API, database, Redis, and frontend together.
+- **Local development:** The API, database, Redis, and frontend run as separate local services.
 
 ### Main gaps
 
@@ -16,7 +16,7 @@ The backend has a coherent foundation for authentication and document Q&A, but i
 - Document extraction and embedding run inside the upload request, which can make requests slow or prone to timeouts as files grow.
 - Several RAG error cases return an `error` object with HTTP 200, making failures look successful to clients.
 - Inline text ingestion has no explicit size limit, even though file uploads do.
-- The SQL schema files initialize a new Docker database but do not provide a migration path for existing databases as the schema evolves.
+- The SQL schema files initialize a new PostgreSQL database but do not provide a migration path for existing databases as the schema evolves.
 - Authentication has access tokens but no refresh-token or session workflow.
 
 ## Recommended workflow
@@ -64,3 +64,5 @@ Apply an equivalent explicit size limit to inline text. Preserve source titles a
 ## Verdict
 
 The current backend is a good prototype foundation for authentication and document Q&A. The next architectural step should be the task and scheduling data flow, because that is the missing foundation for FocusFlow's core product workflow. Background ingestion, consistent HTTP errors, bounded inputs, and schema migrations should follow as the backend grows.
+
+
