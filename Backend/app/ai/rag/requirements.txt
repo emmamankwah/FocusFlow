@@ -1,0 +1,3 @@
+-r ../../../requirements.txt
+# Python packages are installed by the root requirements file.
+# Image OCR also requires the Tesseract executable installed on the host.

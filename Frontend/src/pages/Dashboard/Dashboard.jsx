@@ -1,0 +1,1136 @@
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+import usePageTitle from '@/lib/usePageTitle'
+import { buildPlannerContext, sendPlannerMessage } from '@/lib/ai'
+import { getSessionUser, logout } from '@/lib/authApi'
+import { useTheme } from '@/lib/theme'
+import './dashboard.css'
+import {
+  FOCUS_GOAL_HOURS,
+  baseTasks,
+  fmtLongDate,
+  getChartData,
+  getRisks,
+  greeting,
+  loadBoard,
+  makeNotes,
+  makeSuggestions,
+  riskStyles,
+  saveBoard,
+  sections,
+  userFirstName,
+  userFullName,
+  userInitials,
+} from './data.js'
+import {
+  BrandMark,
+  BTN,
+  BTN_PRIMARY,
+  BTN_QUIET,
+  CheckIcon,
+  MenuIcon,
+  Panel,
+  SectionLabel,
+  SidebarIcon,
+  SparkIcon,
+  ThemeSwitcher,
+  cx,
+} from './ui.jsx'
+import { FocusSection, PlanSection } from './FocusPlan.jsx'
+import {
+  DeadlinesSection,
+  ProgressSection,
+  SuggestionsSection,
+  WellbeingSection,
+} from './Insights.jsx'
+import { ChatSection, NotificationsSection } from './ChatNotes.jsx'
+
+const initialChat = (name) => [
+  {
+    role: 'ai',
+    text: `Hi ${name}. Ask me what to focus on next, why a deadline is risky, or whether your workload is too heavy.`,
+  },
+]
+
+function prefersReducedMotion() {
+  return window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
+}
+
+function StatCell({ label, value, unit, note, meter, valueClass = '' }) {
+  return (
+    <div className="bg-surface/80 px-4 py-4 sm:px-5">
+      <SectionLabel>{label}</SectionLabel>
+      <div className="mt-2 flex items-end gap-1">
+        <span
+          className={cx(
+            'font-grotesk font-bold tracking-[-0.03em] text-ink',
+            valueClass || 'text-[1.55rem] leading-none',
+          )}
+        >
+          {value}
+        </span>
+        {unit && (
+          <span className="mb-0.5 font-sans text-[0.72rem] font-semibold text-dim">
+            {unit}
+          </span>
+        )}
+      </div>
+      {meter !== undefined && (
+        <div className="mt-2.5 h-1 overflow-hidden rounded-full bg-deck">
+          <div
+            className="h-full rounded-full bg-amber transition-[width] duration-500"
+            style={{ width: `${Math.max(0, Math.min(100, meter))}%` }}
+          />
+        </div>
+      )}
+      <p className="mt-2 text-[0.72rem] leading-snug text-dim">{note}</p>
+    </div>
+  )
+}
+
+function StatStrip({ focusHours, focusPct, doneCount, totalCount, planPct, productivity, risk }) {
+  const status =
+    productivity >= 80
+      ? 'On track'
+      : productivity >= 65
+        ? 'Steady'
+        : productivity >= 50
+          ? 'Building'
+          : 'Warming up'
+  const remaining = totalCount - doneCount
+  const productivityNote =
+    focusHours === 0 ? 'Baseline · no focus logged yet' : `${status} · ${remaining} block${remaining === 1 ? '' : 's'} left`
+
+  return (
+    <section
+      id="sec-overview"
+      aria-label="Today at a glance"
+      className="ffd-section ff-stats grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-line/80 bg-line/50 xl:grid-cols-4"
+    >
+      <StatCell
+        label="Focus today"
+        value={focusHours.toFixed(1)}
+        unit="h"
+        meter={focusPct}
+        note={`${Math.round(focusPct)}% of the ${FOCUS_GOAL_HOURS} h goal`}
+      />
+      <StatCell
+        label="Today’s plan"
+        value={doneCount}
+        unit={`of ${totalCount} done`}
+        meter={planPct}
+        note={remaining === 0 ? 'All blocks done' : `${remaining} block${remaining === 1 ? '' : 's'} left`}
+      />
+      <StatCell
+        label="Productivity"
+        value={productivity}
+        unit="/ 100"
+        meter={productivity}
+        note={productivityNote}
+      />
+      <StatCell
+        label="Next deadline"
+        value={risk.off <= 0 ? 'Today' : risk.off}
+        unit={risk.off <= 0 ? '' : risk.off === 1 ? 'day left' : 'days left'}
+        note={
+          <span className="inline-flex flex-wrap items-center gap-x-2 gap-y-1">
+            <span
+              className={cx(
+                'inline-flex rounded-lg border px-1.5 py-0.5 font-mono text-[0.54rem] tracking-[0.08em] uppercase',
+                riskStyles[risk.level].pill,
+              )}
+            >
+              {risk.label}
+            </span>
+            <span className="font-mono text-[0.62rem]">
+              {risk.n} · {risk.p}%
+            </span>
+          </span>
+        }
+      />
+    </section>
+  )
+}
+
+function WorkInboxSection({ queue, tasks, onPost, onSchedule, onRemove }) {
+  const [form, setForm] = useState({ title: '', course: '', due: '', est: '90', notes: '', type: 'focus' })
+  const [error, setError] = useState('')
+  const [open, setOpen] = useState(false)
+  const ref = useRef(null)
+
+  useEffect(() => {
+    if (open) ref.current?.focus()
+  }, [open])
+
+  function change(k, v) {
+    setForm((p) => ({ ...p, [k]: v }))
+    if (error) setError('')
+  }
+
+  function submit(e) {
+    e.preventDefault()
+    const title = form.title.trim()
+    if (!title) {
+      setError('Give the work a title.')
+      ref.current?.focus()
+      return
+    }
+    onPost({ ...form, title })
+    setForm({ title: '', course: '', due: '', est: '90', notes: '', type: 'focus' })
+    setError('')
+  }
+
+  const existingTimes = tasks.map((t) => t.t)
+  const incoming = (queue || []).filter((i) => i.status !== 'scheduled')
+  const scheduled = (queue || []).filter((i) => i.status === 'scheduled')
+
+  function suggestTime(times) {
+    const slots = ['16:00', '17:00', '18:00', '19:00', '20:00', '14:00', '15:00']
+    for (const s of slots) {
+      if (!times.includes(s)) return s
+    }
+    return '18:00'
+  }
+
+  return (
+    <Panel
+      id="sec-work"
+      title="Work Inbox"
+      hint={incoming.length > 0 ? `${incoming.length} waiting` : 'Nothing waiting'}
+      action={
+        <button
+          type="button"
+          onClick={() => setOpen((value) => !value)}
+          aria-expanded={open}
+          aria-controls="ffd-work-form"
+          className={cx(BTN, 'ff-btn')}
+        >
+          {open ? 'Close' : 'Post work'}
+        </button>
+      }
+    >
+      <form
+        id="ffd-work-form"
+        onSubmit={submit}
+        className={cx(
+          'ffd-addform rounded-xl border border-line/70 bg-deck/40 p-4',
+          open ? 'block' : 'hidden',
+        )}
+      >
+        <div className="grid gap-3 sm:grid-cols-2">
+          <label className="grid gap-1.5 text-[0.78rem] text-ink sm:col-span-2">
+            <span className="font-medium">Work title</span>
+            <input
+              ref={ref}
+              value={form.title}
+              onChange={(e) => change('title', e.target.value)}
+              placeholder="e.g. CHEM 230 lab report"
+              className="h-9 rounded-lg border border-line bg-surface px-3 text-[0.82rem] text-ink outline-none transition focus:border-amber/60 focus:ring-2 focus:ring-amber/20"
+            />
+          </label>
+          <label className="grid gap-1.5 text-[0.78rem] text-ink">
+            <span className="font-medium">Course / Module</span>
+            <input
+              value={form.course}
+              onChange={(e) => change('course', e.target.value)}
+              placeholder="e.g. CHEM 230"
+              className="h-9 rounded-lg border border-line bg-surface px-3 text-[0.82rem] text-ink outline-none transition focus:border-amber/60 focus:ring-2 focus:ring-amber/20"
+            />
+          </label>
+          <label className="grid gap-1.5 text-[0.78rem] text-ink">
+            <span className="font-medium">Due date</span>
+            <input
+              type="date"
+              value={form.due}
+              onChange={(e) => change('due', e.target.value)}
+              className="h-9 rounded-lg border border-line bg-surface px-3 text-[0.82rem] text-ink outline-none transition focus:border-amber/60 focus:ring-2 focus:ring-amber/20"
+            />
+          </label>
+          <label className="grid gap-1.5 text-[0.78rem] text-ink">
+            <span className="font-medium">Estimated time</span>
+            <select
+              value={form.est}
+              onChange={(e) => change('est', e.target.value)}
+              className="h-9 rounded-lg border border-line bg-surface px-2 text-[0.82rem] text-ink outline-none transition focus:border-amber/60 focus:ring-2 focus:ring-amber/20"
+            >
+              <option value="30">30 min</option>
+              <option value="45">45 min</option>
+              <option value="60">60 min</option>
+              <option value="90">90 min</option>
+              <option value="120">120 min</option>
+            </select>
+          </label>
+          <label className="grid gap-1.5 text-[0.78rem] text-ink">
+            <span className="font-medium">Type</span>
+            <select
+              value={form.type}
+              onChange={(e) => change('type', e.target.value)}
+              className="h-9 rounded-lg border border-line bg-surface px-2 text-[0.82rem] text-ink outline-none transition focus:border-amber/60 focus:ring-2 focus:ring-amber/20"
+            >
+              <option value="focus">Focus</option>
+              <option value="class">Class</option>
+              <option value="rest">Rest</option>
+            </select>
+          </label>
+          <label className="grid gap-1.5 text-[0.78rem] text-ink sm:col-span-2">
+            <span className="font-medium">Notes</span>
+            <textarea
+              value={form.notes}
+              onChange={(e) => change('notes', e.target.value)}
+              rows={2}
+              placeholder="Details, resources, requirements..."
+              className="rounded-lg border border-line bg-surface px-3 py-2 text-[0.82rem] text-ink outline-none transition focus:border-amber/60 focus:ring-2 focus:ring-amber/20"
+            />
+          </label>
+        </div>
+        {error && (
+          <p role="alert" className="mt-2 text-[0.75rem] text-coral">
+            {error}
+          </p>
+        )}
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <button type="submit" className={cx(BTN_PRIMARY, 'ff-btn')}>
+            Add to inbox
+          </button>
+          <span className="font-mono text-[0.56rem] tracking-[0.12em] text-dim uppercase">
+            System will suggest a slot
+          </span>
+        </div>
+      </form>
+
+      <div className="mt-4 space-y-2">
+        <div className="font-mono text-[0.58rem] tracking-[0.14em] text-dim uppercase">Inbox</div>
+        {incoming.length === 0 && (
+          <p className="text-[0.8rem] text-dim">
+            Post work and FocusFlow will suggest a slot for it.
+          </p>
+        )}
+        {incoming.map((item) => {
+          const time = suggestTime(existingTimes)
+          return (
+            <div
+              key={item.id}
+              className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-line/70 bg-surface/60 px-3 py-2.5"
+            >
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <div className="truncate text-[0.9rem] font-semibold text-ink">{item.title}</div>
+                  {item.course && (
+                    <span className="rounded-lg border border-line px-1.5 py-0.5 font-mono text-[0.54rem] tracking-[0.08em] text-dim uppercase">
+                      {item.course}
+                    </span>
+                  )}
+                </div>
+                <div className="mt-1 flex flex-wrap items-center gap-2 text-[0.72rem] text-dim">
+                  {item.due && <span>Due {item.due}</span>}
+                  <span>
+                    {item.est} min · {item.type}
+                  </span>
+                  {item.notes && <span className="truncate">· {item.notes}</span>}
+                </div>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <button type="button" onClick={() => onSchedule(item.id, time)} className={cx(BTN, 'ff-btn')}>
+                  Schedule for {time}
+                </button>
+                <button type="button" onClick={() => onRemove(item.id)} className={cx(BTN_QUIET, 'ff-btn')}>
+                  Remove
+                </button>
+              </div>
+            </div>
+          )
+        })}
+        {scheduled.length > 0 && (
+          <div className="mt-4 font-mono text-[0.58rem] tracking-[0.14em] text-dim uppercase">
+            Scheduled
+          </div>
+        )}
+        {scheduled.map((item) => (
+          <div
+            key={item.id}
+            className="flex items-center justify-between gap-3 rounded-xl border border-line/70 bg-surface/40 px-3 py-2.5"
+          >
+            <div className="flex items-center gap-2">
+              <CheckIcon className="h-3.5 w-3.5 text-cyan" />
+              <div className="text-[0.86rem] text-ink">{item.title}</div>
+              <span className="font-mono text-[0.58rem] text-dim">{item.scheduledAt}</span>
+            </div>
+            <button type="button" onClick={() => onRemove(item.id)} className={cx(BTN_QUIET, 'ff-btn')}>
+              Remove
+            </button>
+          </div>
+        ))}
+      </div>
+    </Panel>
+  )
+}
+
+function UserCard({ user, onLogout }) {
+  return (
+    <div className="flex items-center gap-2.5 rounded-xl border border-line/80 bg-surface/70 p-2.5 lg:w-full">
+      <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full border border-amber/30 bg-amber/10 font-grotesk text-[0.7rem] font-bold text-amber">
+        {userInitials(user)}
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-[0.78rem] font-semibold text-ink">
+          {userFullName(user)}
+        </span>
+        <span className="block font-mono text-[0.54rem] tracking-[0.14em] text-dim uppercase">
+          {user?.persona || 'Student'}
+        </span>
+      </span>
+      <button
+        type="button"
+        onClick={onLogout}
+        title="Log out"
+        className="shrink-0 rounded-lg px-2 py-1 font-mono text-[0.54rem] tracking-[0.12em] text-dim uppercase transition-colors hover:bg-deck/70 hover:text-ink"
+      >
+        Log out
+      </button>
+    </div>
+  )
+}
+
+function DashboardRail({ active, onNav, unread, user, onLogout, theme, onTheme, railHidden }) {
+  const [menuOpen, setMenuOpen] = useState(false)
+  const menuRef = useRef(null)
+  const menuButtonRef = useRef(null)
+
+  useEffect(() => {
+    if (!menuOpen) return undefined
+
+    const onKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        setMenuOpen(false)
+        menuButtonRef.current?.focus()
+      }
+    }
+    const onPointerDown = (event) => {
+      if (
+        !menuRef.current?.contains(event.target) &&
+        !menuButtonRef.current?.contains(event.target)
+      ) {
+        setMenuOpen(false)
+      }
+    }
+    const desktop = window.matchMedia?.('(min-width: 64rem)')
+    const closeOnDesktop = () => {
+      if (desktop?.matches) setMenuOpen(false)
+    }
+
+    document.addEventListener('keydown', onKeyDown)
+    document.addEventListener('pointerdown', onPointerDown)
+    desktop?.addEventListener('change', closeOnDesktop)
+    return () => {
+      document.removeEventListener('keydown', onKeyDown)
+      document.removeEventListener('pointerdown', onPointerDown)
+      desktop?.removeEventListener('change', closeOnDesktop)
+    }
+  }, [menuOpen])
+
+  function handleNav(id) {
+    setMenuOpen(false)
+    requestAnimationFrame(() => onNav(id))
+  }
+
+  return (
+    <aside
+      id="ff-dashboard-rail"
+      className={cx(
+        'ff-rail relative lg:sticky lg:top-8',
+        railHidden && 'lg:hidden',
+      )}
+    >
+      <div className="flex flex-col gap-3 lg:gap-5">
+        <div className="flex items-center justify-between gap-3">
+          <Link
+            to="/"
+            className="inline-flex min-w-0 items-center gap-2.5"
+            aria-label="FocusFlow home"
+          >
+            <BrandMark />
+            <span className="font-grotesk text-[1.05rem] font-bold tracking-[-0.02em] text-ink">
+              Focus<span className="text-amber">Flow</span>
+            </span>
+          </Link>
+          <button
+            ref={menuButtonRef}
+            type="button"
+            onClick={() => setMenuOpen((open) => !open)}
+            aria-expanded={menuOpen}
+            aria-controls="ff-dashboard-menu"
+            aria-label={menuOpen ? 'Close dashboard menu' : 'Open dashboard menu'}
+            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-line bg-surface text-ink transition duration-150 hover:border-dim focus-visible:ring-2 focus-visible:ring-amber/35 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas focus-visible:outline-none lg:hidden"
+          >
+            <MenuIcon open={menuOpen} className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div
+          id="ff-dashboard-menu"
+          ref={menuRef}
+          className={cx(
+            'ffd-menu absolute top-full right-0 z-30 mt-2 max-h-[calc(100vh-6rem)] w-[min(280px,calc(100vw-2rem))] overflow-y-auto rounded-2xl border border-line/80 bg-surface p-2 shadow-[0_24px_60px_-30px_rgba(16,27,59,0.35)] lg:static lg:mt-0 lg:w-full lg:overflow-visible lg:rounded-none lg:border-0 lg:bg-transparent lg:p-0 lg:shadow-none lg:contents',
+            menuOpen ? 'block' : 'hidden',
+          )}
+        >
+          <nav
+            aria-label="Dashboard sections"
+            className="ff-nav ffd-nav-scroll grid w-full gap-1 lg:flex lg:flex-col"
+          >
+            {sections.map((section) => {
+              const isActive = active === section.id
+              const className = cx(
+                'flex min-h-9 shrink-0 items-center justify-between gap-2 rounded-lg border-l-2 px-3 py-2 text-left font-mono text-[0.63rem] tracking-[0.13em] uppercase transition lg:w-full',
+                isActive
+                  ? 'border-amber bg-amber/10 text-amber'
+                  : 'border-transparent text-dim hover:bg-deck/60 hover:text-ink',
+              )
+              const unreadBadge = section.id === 'sec-notes' && unread > 0 && (
+                <span
+                  className="rounded-full bg-amber px-1.5 py-0.5 font-mono text-[0.56rem] font-semibold tracking-normal text-white"
+                  aria-label={`${unread} unread notifications`}
+                >
+                  {unread}
+                </span>
+              )
+
+              if (section.to) {
+                return (
+                  <Link
+                    key={section.id}
+                    to={section.to}
+                    onClick={() => setMenuOpen(false)}
+                    className={className}
+                  >
+                    <span>{section.label}</span>
+                    {unreadBadge}
+                  </Link>
+                )
+              }
+
+              return (
+                <button
+                  key={section.id}
+                  type="button"
+                  onClick={() => handleNav(section.id)}
+                  aria-current={isActive ? 'true' : undefined}
+                  className={className}
+                >
+                  <span>{section.label}</span>
+                  {unreadBadge}
+                </button>
+              )
+            })}
+          </nav>
+
+          <div className="mt-2 border-t border-line/60 px-1 pt-3 pb-1 lg:hidden">
+            <UserCard user={user} onLogout={onLogout} />
+            <ThemeSwitcher theme={theme} onChange={onTheme} className="mt-2" />
+          </div>
+        </div>
+
+        <div className="hidden lg:block">
+          <UserCard user={user} onLogout={onLogout} />
+          <ThemeSwitcher theme={theme} onChange={onTheme} className="mt-2" />
+        </div>
+      </div>
+    </aside>
+  )
+}
+
+export default function Dashboard() {
+  usePageTitle('Dashboard — FocusFlow')
+
+  const today = useMemo(() => new Date(), [])
+  const user = useMemo(() => getSessionUser(), [])
+  const [theme, setTheme] = useTheme()
+  const navigate = useNavigate()
+  const [board, setBoard] = useState(() => loadBoard(today))
+  const [active, setActive] = useState('sec-focus')
+  const [toast, setToast] = useState('')
+  const toastTimer = useRef(null)
+  const navLockRef = useRef(0)
+  const [railHidden, setRailHidden] = useState(() => {
+    try {
+      return localStorage.getItem('focusflow-rail-hidden') === '1'
+    } catch {
+      return false
+    }
+  })
+
+  const [addOpen, setAddOpen] = useState(false)
+  const [form, setForm] = useState({ title: '', time: '16:00', duration: '45', type: 'focus' })
+  const [formError, setFormError] = useState('')
+  const titleRef = useRef(null)
+  const planRef = useRef(null)
+
+  const [durationMin, setDurationMin] = useState(45)
+  const [remainSec, setRemainSec] = useState(45 * 60)
+  const [running, setRunning] = useState(false)
+  const remainRef = useRef(remainSec)
+  const sessionTaskRef = useRef(null)
+
+  const [chat, setChat] = useState(() => initialChat(userFirstName(user)))
+  const [chatInput, setChatInput] = useState('')
+  const [chatPending, setChatPending] = useState(false)
+  const chatLogRef = useRef(null)
+
+  const suggestions = useMemo(() => makeSuggestions(today), [today])
+  const notes = useMemo(() => makeNotes(today), [today])
+  const risks = useMemo(() => getRisks(today, board.sugs), [today, board.sugs])
+  const chart = useMemo(() => getChartData(today), [today])
+
+  const allTasks = useMemo(
+    () =>
+      [...baseTasks, ...board.custom].sort((a, b) => a.t.localeCompare(b.t)),
+    [board.custom],
+  )
+  const nextTask = allTasks.find((task) => !board.done[task.id]) ?? null
+  const heroTask =
+    allTasks.find((task) => task.type === 'focus' && !board.done[task.id]) ?? null
+  const doneCount = allTasks.filter((task) => board.done[task.id]).length
+  const focusMinutes =
+    board.extraMin +
+    allTasks
+      .filter((task) => task.type === 'focus' && board.done[task.id] && !board.timed[task.id])
+      .reduce((sum, task) => sum + task.dur, 0)
+  const focusHours = focusMinutes / 60
+  const focusPct = Math.min(100, (focusMinutes / (FOCUS_GOAL_HOURS * 60)) * 100)
+  const planPct = allTasks.length ? (doneCount / allTasks.length) * 100 : 0
+  const score = board.sugs.s2 === 'done' ? 33 : 41
+  const productivity = Math.max(
+    0,
+    Math.min(100, Math.round(focusPct * 0.6 + (100 - score) * 0.4)),
+  )
+  const unread = notes.filter((note) => !board.read[note.id]).length
+  const chartTotal = chart.reduce((sum, day) => sum + day.hours, 0)
+  const chartAverage = chartTotal / chart.length
+
+  const showToast = useCallback((message) => {
+    setToast(message)
+    clearTimeout(toastTimer.current)
+    toastTimer.current = setTimeout(() => setToast(''), 2800)
+  }, [])
+
+  useEffect(() => {
+    saveBoard(board, today)
+  }, [board, today])
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('focusflow-rail-hidden', railHidden ? '1' : '0')
+    } catch {
+      // Preference only; ignore unavailable storage.
+    }
+  }, [railHidden])
+
+  useEffect(() => () => clearTimeout(toastTimer.current), [])
+
+  useEffect(() => {
+    remainRef.current = remainSec
+  }, [remainSec])
+
+  useEffect(() => {
+    if (!addOpen) return undefined
+    setFormError('')
+    planRef.current?.scrollIntoView({
+      behavior: prefersReducedMotion() ? 'auto' : 'smooth',
+      block: 'center',
+    })
+    titleRef.current?.focus({ preventScroll: true })
+  }, [addOpen])
+
+  useEffect(() => {
+    const el = chatLogRef.current
+    if (el) el.scrollTop = el.scrollHeight
+  }, [chat])
+
+  const scrollToSection = useCallback((id) => {
+    const el = document.getElementById(id)
+    if (!el) return
+    el.scrollIntoView({
+      behavior: prefersReducedMotion() ? 'auto' : 'smooth',
+      block: 'start',
+    })
+  }, [])
+
+  useEffect(() => {
+    const tracked = sections.filter((section) => !section.to)
+
+    const updateActive = () => {
+      if (Date.now() < navLockRef.current) return
+      if (
+        window.innerHeight + window.scrollY >=
+        document.documentElement.scrollHeight - 8
+      ) {
+        setActive(tracked[tracked.length - 1].id)
+        return
+      }
+      const probe = window.scrollY + 160
+      let current = tracked[0].id
+      tracked.forEach((section) => {
+        const el = document.getElementById(section.id)
+        if (!el) return
+        if (el.getBoundingClientRect().top + window.scrollY <= probe) {
+          current = section.id
+        }
+      })
+      setActive(current)
+    }
+
+    updateActive()
+    window.addEventListener('scroll', updateActive, { passive: true })
+    return () => window.removeEventListener('scroll', updateActive)
+  }, [])
+
+  const completeSession = useCallback(() => {
+    const taskId = sessionTaskRef.current
+    const task = allTasks.find((item) => item.id === taskId)
+    setBoard((prev) => {
+      const next = { ...prev, extraMin: prev.extraMin + durationMin }
+      if (task) {
+        next.timed = { ...prev.timed, [task.id]: true }
+        if (durationMin >= task.dur) {
+          next.done = { ...prev.done, [task.id]: true }
+        }
+      }
+      return next
+    })
+    setRunning(false)
+    setRemainSec(0)
+    remainRef.current = 0
+    sessionTaskRef.current = null
+    showToast('Session complete. Take a 5 minute break.')
+  }, [allTasks, durationMin, showToast])
+
+  useEffect(() => {
+    if (!running) return undefined
+    const id = setInterval(() => {
+      const next = Math.max(0, remainRef.current - 1)
+      remainRef.current = next
+      setRemainSec(next)
+      if (next === 0) {
+        clearInterval(id)
+        completeSession()
+      }
+    }, 1000)
+    return () => clearInterval(id)
+  }, [running, completeSession])
+
+  function handleStartPause() {
+    if (running) {
+      setRunning(false)
+      return
+    }
+    const startingFresh = remainSec === 0 || remainSec === durationMin * 60
+    if (remainSec === 0) {
+      setRemainSec(durationMin * 60)
+      remainRef.current = durationMin * 60
+    }
+    if (startingFresh) sessionTaskRef.current = heroTask?.id ?? null
+    setRunning(true)
+  }
+
+  function resetTimer() {
+    setRunning(false)
+    setRemainSec(durationMin * 60)
+    remainRef.current = durationMin * 60
+    sessionTaskRef.current = null
+  }
+
+  function chooseDuration(minutes) {
+    setRunning(false)
+    setDurationMin(minutes)
+    setRemainSec(minutes * 60)
+    remainRef.current = minutes * 60
+    sessionTaskRef.current = null
+  }
+
+  function handleToggle(taskId) {
+    setBoard((prev) => ({
+      ...prev,
+      done: { ...prev.done, [taskId]: !prev.done[taskId] },
+    }))
+  }
+
+  function handleRemove(taskId) {
+    setBoard((prev) => {
+      const done = { ...prev.done }
+      const timed = { ...prev.timed }
+      const sugs = { ...prev.sugs }
+      delete done[taskId]
+      delete timed[taskId]
+      if (taskId.startsWith('sugg-')) delete sugs[taskId.slice(5)]
+      return {
+        ...prev,
+        custom: prev.custom.filter((task) => task.id !== taskId),
+        done,
+        timed,
+        sugs,
+      }
+    })
+    showToast('Task removed from today’s plan.')
+  }
+
+  function handleAdd(event) {
+    event.preventDefault()
+    const title = form.title.trim()
+    if (!title) {
+      setFormError('Give the block a name.')
+      titleRef.current?.focus()
+      return
+    }
+    if (!form.time) {
+      setFormError('Choose a start time.')
+      return
+    }
+
+    const createdTask = {
+      id: `c${Date.now()}`,
+      t: form.time,
+      dur: Number(form.duration),
+      title,
+      meta: 'Added by you',
+      type: form.type,
+      custom: true,
+    }
+    setBoard((prev) => ({ ...prev, custom: [...prev.custom, createdTask] }))
+    setForm((prev) => ({ ...prev, title: '' }))
+    setFormError('')
+    showToast('Task added to today’s plan.')
+    titleRef.current?.focus()
+  }
+
+  function handleFormChange(field, value) {
+    setForm((prev) => ({ ...prev, [field]: value }))
+    if (formError) setFormError('')
+  }
+
+  function toggleAddForm() {
+    const next = !addOpen
+    setAddOpen(next)
+    if (!next) setFormError('')
+  }
+
+  function handleSuggestion(id, decision) {
+    const item = suggestions.find((suggestion) => suggestion.id === id)
+    setBoard((prev) => {
+      const next = { ...prev, sugs: { ...prev.sugs, [id]: decision } }
+      if (decision === 'done' && item?.block) {
+        const taskId = `sugg-${id}`
+        if (!prev.custom.some((task) => task.id === taskId)) {
+          next.custom = [...prev.custom, { id: taskId, ...item.block, custom: true }]
+        }
+      }
+      return next
+    })
+    showToast(
+      decision === 'done'
+        ? item?.ok || 'Added to your plan.'
+        : 'Noted. I’ll only bring this back if things change.',
+    )
+  }
+
+  function markRead(id) {
+    setBoard((prev) => ({ ...prev, read: { ...prev.read, [id]: true } }))
+  }
+
+  function markAllRead() {
+    setBoard((prev) => ({
+      ...prev,
+      read: Object.fromEntries(notes.map((note) => [note.id, true])),
+    }))
+  }
+
+  const ask = useCallback(
+    async (raw) => {
+      const question = raw.trim()
+      if (!question || chatPending) return
+
+      const nextMessages = [...chat, { role: 'user', text: question }]
+      setChat(nextMessages)
+      setChatPending(true)
+
+      const context = buildPlannerContext({
+        dateLabel: fmtLongDate(today),
+        score,
+        restPlanned: board.sugs.s2 === 'done',
+        pendingTasks: allTasks.filter((task) => !board.done[task.id]),
+        risks,
+      })
+
+      try {
+        const reply = await sendPlannerMessage(nextMessages, context)
+        setChat((prev) => [...prev, { role: 'ai', text: reply }])
+      } catch {
+        setChat((prev) => [
+          ...prev,
+          {
+            role: 'ai',
+            error: true,
+            text: 'I could not reach the AI service. Check that the backend is running, then try again.',
+          },
+        ])
+      } finally {
+        setChatPending(false)
+      }
+    },
+    [allTasks, board.done, board.sugs.s2, chat, chatPending, risks, score, today],
+  )
+
+  function handleSend(event) {
+    event.preventDefault()
+    if (!chatInput.trim() || chatPending) return
+    ask(chatInput)
+    setChatInput('')
+  }
+
+  function replan() {
+    showToast('Week re-planned. Review the suggestions.')
+    navLockRef.current = Date.now() + 1200
+    setActive('sec-ai')
+    scrollToSection('sec-ai')
+    ask('Re-plan my week')
+  }
+
+  function handleNav(id) {
+    navLockRef.current = Date.now() + 1200
+    setActive(id)
+    scrollToSection(id)
+  }
+
+  function handlePostWork(data) {
+    const item = {
+      id: `w${Date.now()}`,
+      title: data.title,
+      course: (data.course || '').trim(),
+      due: data.due || '',
+      est: Number(data.est) || 90,
+      notes: (data.notes || '').trim(),
+      type: data.type || 'focus',
+      status: 'inbox',
+      createdAt: new Date().toISOString(),
+    }
+    setBoard((prev) => ({ ...prev, workQueue: [item, ...(prev.workQueue || [])] }))
+    showToast('Work posted to inbox.')
+  }
+
+  function handleScheduleWork(id, time) {
+    setBoard((prev) => {
+      const item = (prev.workQueue || []).find((w) => w.id === id)
+      if (!item) return prev
+      const createdTask = {
+        id: `c${Date.now()}`,
+        t: time,
+        dur: item.est,
+        title: item.course ? `${item.course}: ${item.title}` : item.title,
+        meta: item.due ? `Due ${item.due}${item.notes ? ' · ' + item.notes : ''}` : item.notes || 'From Work Inbox',
+        type: item.type,
+        custom: true,
+      }
+      const workQueue = (prev.workQueue || []).map((w) =>
+        w.id === id ? { ...w, status: 'scheduled', scheduledAt: time, taskId: createdTask.id } : w,
+      )
+      return { ...prev, custom: [...prev.custom, createdTask], workQueue }
+    })
+    showToast('Scheduled to today’s plan.')
+  }
+
+  function handleRemoveWork(id) {
+    setBoard((prev) => ({ ...prev, workQueue: (prev.workQueue || []).filter((w) => w.id !== id) }))
+  }
+
+  const nextCopy = nextTask
+    ? `Next up: ${nextTask.t} · ${nextTask.title}.`
+    : 'Everything planned is done. Protect the rest of the evening.'
+
+  return (
+    <div
+      id="dashboard"
+      data-theme={theme}
+      className="ff-product ff-dashboard ff-app relative min-h-screen bg-canvas font-sans text-ink"
+    >
+      <div aria-hidden="true" className="pointer-events-none fixed inset-0">
+        <div className="absolute -top-40 -left-32 h-[520px] w-[520px] rounded-full bg-amber/[0.06] blur-3xl" />
+        <div className="absolute top-1/4 -right-40 h-[420px] w-[420px] rounded-full bg-cyan/[0.04] blur-3xl" />
+        <div className="absolute bottom-[-160px] left-1/3 h-[420px] w-[420px] rounded-full bg-coral/[0.04] blur-3xl" />
+        <div className="ffd-grid-bg absolute inset-0" />
+      </div>
+
+      <div
+        className={cx(
+          'relative mx-auto w-full max-w-[1320px] px-4 py-6 sm:px-6 lg:grid lg:items-start lg:gap-8 lg:px-8 lg:py-8',
+          railHidden ? 'lg:grid-cols-1' : 'lg:grid-cols-[200px_minmax(0,1fr)]',
+        )}
+      >
+        <DashboardRail
+          active={active}
+          onNav={handleNav}
+          unread={unread}
+          user={user}
+          theme={theme}
+          onTheme={setTheme}
+          railHidden={railHidden}
+          onLogout={() => {
+            logout()
+            navigate('/login', { replace: true })
+          }}
+        />
+
+        <main className="ff-main mt-5 min-w-0 lg:mt-0">
+          <div className="mb-4 hidden items-center gap-3 lg:flex">
+            <button
+              type="button"
+              onClick={() => setRailHidden((hidden) => !hidden)}
+              aria-expanded={!railHidden}
+              aria-controls="ff-dashboard-rail"
+              aria-label={railHidden ? 'Show navigation' : 'Hide navigation'}
+              title={railHidden ? 'Show navigation' : 'Hide navigation'}
+              className={cx(BTN, 'ff-btn hidden lg:inline-flex')}
+            >
+              <SidebarIcon className="h-3.5 w-3.5" />
+              <span className="hidden xl:inline">{railHidden ? 'Show nav' : 'Hide nav'}</span>
+            </button>
+          </div>
+          {railHidden && (
+            <div className="mb-5 hidden lg:block">
+              <Link
+                to="/"
+                className="inline-flex items-center gap-2.5"
+                aria-label="FocusFlow home"
+              >
+                <BrandMark />
+                <span className="font-grotesk text-[1.05rem] font-bold tracking-[-0.02em] text-ink">
+                  Focus<span className="text-amber">Flow</span>
+                </span>
+              </Link>
+            </div>
+          )}
+          <div className="ff-top flex flex-wrap items-end justify-between gap-x-6 gap-y-4">
+            <div className="min-w-0">
+              <SectionLabel className="text-amber/85">{fmtLongDate(today)}</SectionLabel>
+              <h1 className="mt-2.5 font-grotesk text-[2rem] leading-[1.05] font-bold tracking-[-0.035em] text-ink sm:text-[2.6rem]">
+                {greeting(today, userFirstName(user))}
+              </h1>
+              <p className="mt-3 max-w-xl text-[0.9rem] leading-relaxed text-dim">
+                {nextCopy}
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center gap-2 pb-1">
+              <button type="button" onClick={replan} className={cx(BTN, 'ff-btn')}>
+                <SparkIcon className="h-3.5 w-3.5" />
+                Re-plan my week
+              </button>
+              <button
+                type="button"
+                onClick={toggleAddForm}
+                className={cx(BTN_PRIMARY, 'ff-btn')}
+                aria-expanded={addOpen}
+                aria-controls="ff-addform"
+              >
+                {addOpen ? 'Close' : 'Add task'}
+              </button>
+            </div>
+          </div>
+
+          <div className="mt-6">
+            <StatStrip
+              focusHours={focusHours}
+              focusPct={focusPct}
+              doneCount={doneCount}
+              totalCount={allTasks.length}
+              planPct={planPct}
+              productivity={productivity}
+              risk={risks[0]}
+            />
+          </div>
+
+          <div className="ff-grid mt-5 grid gap-5 xl:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)]">
+            <div className="space-y-5">
+              <FocusSection
+                heroTask={heroTask}
+                durationMin={durationMin}
+                remainSec={remainSec}
+                running={running}
+                onDuration={chooseDuration}
+                onStartPause={handleStartPause}
+                onReset={resetTimer}
+              />
+              <PlanSection
+                tasks={allTasks}
+                done={board.done}
+                nextId={nextTask?.id}
+                addOpen={addOpen}
+                form={form}
+                onFormChange={handleFormChange}
+                onAdd={handleAdd}
+                formError={formError}
+                onToggle={handleToggle}
+                onRemove={handleRemove}
+                titleRef={titleRef}
+                sectionRef={planRef}
+              />
+            </div>
+
+            <div className="space-y-5">
+              <WorkInboxSection
+                queue={board.workQueue || []}
+                tasks={allTasks}
+                onPost={handlePostWork}
+                onSchedule={handleScheduleWork}
+                onRemove={handleRemoveWork}
+              />
+              <SuggestionsSection
+                suggestions={suggestions}
+                sugs={board.sugs}
+                onSuggestion={handleSuggestion}
+              />
+              <DeadlinesSection risks={risks} />
+            </div>
+          </div>
+
+          <div className="ff-grid mt-5 grid gap-5 xl:grid-cols-2">
+            <WellbeingSection score={score} restPlanned={board.sugs.s2 === 'done'} />
+            <ProgressSection chart={chart} total={chartTotal} average={chartAverage} />
+          </div>
+
+          <div className="ff-grid mt-5 grid gap-5 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
+            <ChatSection
+              messages={chat}
+              chatInput={chatInput}
+              onChatInput={setChatInput}
+              onSend={handleSend}
+              onAsk={ask}
+              logRef={chatLogRef}
+              pending={chatPending}
+            />
+            <NotificationsSection
+              notes={notes}
+              read={board.read}
+              unread={unread}
+              onRead={markRead}
+              onMarkAll={markAllRead}
+            />
+          </div>
+
+          <footer className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-line/60 pt-4 font-mono text-[0.58rem] tracking-[0.1em] text-dim uppercase">
+            <span>FocusFlow · Preview build</span>
+            <span>Changes are saved on this device</span>
+          </footer>
+        </main>
+      </div>
+
+      <div
+        role="status"
+        aria-live="polite"
+        className={cx(
+          'ffd-toast fixed bottom-5 left-1/2 z-40 w-[92vw] max-w-[420px] -translate-x-1/2 rounded-xl border border-amber/30 bg-surface px-4 py-3 text-center text-[0.8rem] font-medium text-ink shadow-[0_22px_70px_-30px_rgba(16,27,59,0.35)]',
+          toast ? 'translate-y-0 opacity-100' : 'pointer-events-none translate-y-2 opacity-0',
+        )}
+      >
+        {toast}
+      </div>
+    </div>
+  )
+}

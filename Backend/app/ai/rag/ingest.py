@@ -1,0 +1,107 @@
+"""Document ingestion: extract text, chunk it, embed it, persist it."""
+
+from __future__ import annotations
+
+from pathlib import Path
+
+from . import chunking, cleaning, config, embeddings, extract, vector_store
+from .cleaning import boilerplate
+
+
+class IngestError(Exception):
+    """A user-facing ingestion failure."""
+
+    def __init__(self, message: str) -> None:
+        self.message = message
+        super().__init__(message)
+
+
+def max_upload_bytes() -> int:
+    return config.MAX_UPLOAD_MB * 1024 * 1024
+
+
+def ingest_file(
+    user_id: int,
+    title: str,
+    filename: str | None,
+    content_type: str | None,
+    data: bytes,
+) -> dict:
+    size = len(data)
+    limit = max_upload_bytes()
+    if size > limit:
+        raise IngestError(f"File is larger than {config.MAX_UPLOAD_MB} MB.")
+
+    try:
+        text = extract.extract_text(filename, content_type, data)
+    except extract.UnsupportedDocument as exc:
+        raise IngestError(str(exc)) from exc
+
+    return ingest_text(
+        user_id,
+        title,
+        text,
+        filename=filename,
+        content_type=content_type,
+        size_bytes=size,
+        reconstruct=Path(filename or "").suffix.lower() in {".pdf", ".docx"},
+    )
+
+
+def ingest_text(
+    user_id: int,
+    title: str,
+    text: str,
+    filename: str | None = None,
+    content_type: str | None = None,
+    size_bytes: int | None = None,
+    reconstruct: bool = False,
+) -> dict:
+    text = cleaning.clean_text(text)
+    text = boilerplate.remove_boilerplate(text)
+    if reconstruct:
+        text = cleaning.reconstruct_paragraphs(text)
+    if not text:
+        raise IngestError("The document has no extractable text.")
+
+    document = vector_store.create_document(
+        user_id=user_id,
+        title=title,
+        filename=filename,
+        content_type=content_type,
+        size_bytes=size_bytes,
+    )
+
+    try:
+        pieces = chunking.chunk_text(text)
+        if not pieces:
+            raise IngestError("The document has no extractable text.")
+
+        vectors = embeddings.embed_texts(pieces)
+        chunks = [
+            {
+                "chunkIndex": index,
+                "content": piece,
+                "tokenCount": chunking.approximate_token_count(piece),
+                "embedding": embeddings.vector_to_sql(vector),
+            }
+            for index, (piece, vector) in enumerate(zip(pieces, vectors))
+        ]
+
+        vector_store.store_document_chunks(document["id"], user_id, chunks)
+    except Exception as exc:
+        try:
+            vector_store.set_document_status(
+                document["id"],
+                user_id,
+                "failed",
+                str(exc),
+            )
+        except Exception:
+            # Preserve the original failure; the status update is best-effort.
+            pass
+        raise
+
+    document["status"] = "ready"
+    document["chunk_count"] = len(chunks)
+    return document
