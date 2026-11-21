@@ -12,6 +12,7 @@ export const sections = [
   { id: 'sec-progress', label: 'Progress' },
   { id: 'sec-chat', label: 'Planner chat', to: '/ai-planner' },
   { id: 'sec-notes', label: 'Notifications' },
+  { id: 'sec-settings', label: 'Settings' },
 ]
 
 export const baseTasks = [

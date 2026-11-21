@@ -384,7 +384,7 @@ function UserCard({ user }) {
   )
 }
 
-function DashboardRail({ active, onNav, unread, user, theme, onTheme, railHidden }) {
+function DashboardRail({ active, onNav, unread, user, railHidden }) {
   const [menuOpen, setMenuOpen] = useState(false)
   const menuRef = useRef(null)
   const menuButtonRef = useRef(null)
@@ -530,14 +530,12 @@ function DashboardRail({ active, onNav, unread, user, theme, onTheme, railHidden
 
             <div className="mt-2 border-t border-line/60 px-1 pt-3 pb-1 lg:hidden">
               <UserCard user={user} />
-              <ThemeSwitcher theme={theme} onChange={onTheme} className="mt-2" />
               <LogoutButton className="mt-2" onNavigate={() => setMenuOpen(false)} />
             </div>
           </div>
 
           <div className="hidden lg:block">
             <UserCard user={user} />
-            <ThemeSwitcher theme={theme} onChange={onTheme} className="mt-2" />
             <LogoutButton className="mt-2" />
           </div>
         </div>
@@ -975,8 +973,6 @@ export default function Dashboard() {
           onNav={handleNav}
           unread={unread}
           user={user}
-          theme={theme}
-          onTheme={setTheme}
           railHidden={railHidden}
         />
 
@@ -1115,6 +1111,18 @@ export default function Dashboard() {
               onMarkAll={markAllRead}
             />
           </div>
+
+          <Panel id="sec-settings" title="Settings" hint="Appearance" className="ff-grid">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0">
+                <SectionLabel>Dashboard theme</SectionLabel>
+                <p className="mt-1.5 max-w-md text-[0.8rem] leading-relaxed text-dim">
+                  Choose the palette used across your dashboard. Your choice is saved on this device.
+                </p>
+              </div>
+              <ThemeSwitcher theme={theme} onChange={setTheme} className="w-full sm:w-[290px]" />
+            </div>
+          </Panel>
 
           <footer className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-line/60 pt-4 font-mono text-[0.58rem] tracking-[0.1em] text-dim uppercase">
             <span>FocusFlow · Preview build</span>
