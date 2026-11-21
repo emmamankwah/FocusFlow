@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import usePageTitle from '@/lib/usePageTitle'
 import '../Dashboard/dashboard.css'
 import {
@@ -18,7 +18,7 @@ import {
   userInitials,
 } from '../Dashboard/data.js'
 import { buildPlannerContext, sendPlannerMessage } from '@/lib/ai'
-import { getSessionUser } from '@/lib/authApi'
+import { getSessionUser, logout } from '@/lib/authApi'
 import { useTheme } from '@/lib/theme'
 import {
   BrandMark,
@@ -145,6 +145,7 @@ function AiPlannerNav({ open, onClose, active, unread, user }) {
 }
 
 export default function AiPlanner() {
+  const navigate = useNavigate()
   usePageTitle('AI Planner — FocusFlow')
 
   const today = useMemo(() => new Date(), [])
@@ -158,6 +159,11 @@ export default function AiPlanner() {
 
   const openNav = useCallback(() => setNavOpen(true), [])
   const closeNav = useCallback(() => setNavOpen(false), [])
+
+  function handleLogout() {
+    logout()
+    navigate('/login', { replace: true })
+  }
 
   const [chat, setChat] = useState(() => initialChat(userFirstName(user)))
   const [chatInput, setChatInput] = useState('')
@@ -351,7 +357,12 @@ export default function AiPlanner() {
             AI Planner
           </span>
 
-          <ThemeSwitcher theme={theme} onChange={setTheme} compact className="ml-auto" />
+          <div className="ml-auto flex items-center gap-2">
+            <ThemeSwitcher theme={theme} onChange={setTheme} compact />
+            <button type="button" onClick={handleLogout} className={cx(BTN, 'ff-btn')}>
+              Log out
+            </button>
+          </div>
         </div>
 
         <div className="flex min-h-0 w-full flex-1 gap-4 lg:gap-6">
