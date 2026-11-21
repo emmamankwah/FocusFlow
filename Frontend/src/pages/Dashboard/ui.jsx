@@ -1,3 +1,5 @@
+import { useNavigate } from 'react-router-dom'
+import { logout } from '@/lib/authApi'
 import { THEMES } from '@/lib/theme'
 
 export function cx(...parts) {
@@ -12,6 +14,27 @@ export const BTN_PRIMARY =
 
 export const BTN_QUIET =
   'inline-flex items-center justify-center gap-1.5 rounded-lg border border-transparent bg-transparent px-2.5 py-1 text-[0.72rem] font-semibold text-dim transition hover:border-line hover:text-ink disabled:cursor-not-allowed disabled:opacity-45'
+
+export function LogoutButton({ className = '', onNavigate }) {
+  const navigate = useNavigate()
+
+  return (
+    <button
+      type="button"
+      onClick={() => {
+        logout()
+        onNavigate?.()
+        navigate('/login', { replace: true })
+      }}
+      className={cx(
+        'flex min-h-9 w-full items-center rounded-lg border border-transparent px-3 py-2 text-left font-mono text-[0.63rem] tracking-[0.13em] text-dim uppercase transition hover:border-coral/30 hover:bg-coral/5 hover:text-coral focus-visible:ring-2 focus-visible:ring-coral/40 focus-visible:outline-none',
+        className,
+      )}
+    >
+      Log out
+    </button>
+  )
+}
 
 export function BrandMark({ className = '' }) {
   return (
@@ -134,7 +157,7 @@ export function Panel({ id, title, hint, action, children, className = '', ariaL
       aria-labelledby={title ? `${id}-title` : undefined}
       aria-label={title ? undefined : ariaLabel}
       className={cx(
-        'ffd-section relative overflow-hidden rounded-2xl border border-line/80 bg-surface/80 p-5 shadow-[0_24px_60px_-45px_rgba(16,27,59,0.4)]',
+        'ffd-section relative rounded-2xl border border-line/80 bg-surface/80 p-5 shadow-[0_24px_60px_-45px_rgba(16,27,59,0.4)]',
         className,
       )}
     >

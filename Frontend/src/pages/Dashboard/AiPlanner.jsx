@@ -24,6 +24,7 @@ import {
   BrandMark,
   BTN,
   BTN_PRIMARY,
+  LogoutButton,
   MenuIcon,
   SectionLabel,
   SparkIcon,
@@ -62,21 +63,24 @@ function AiPlannerNav({ open, onClose, active, unread, user }) {
     { id: 'chat', label: 'Chat', to: '/ai-planner' },
   ]
 
-  if (!open) return null
-
   return (
     <>
-      <button
-        type="button"
-        aria-label="Close navigation menu"
-        onClick={onClose}
-        className="fixed inset-0 z-30 h-full w-full cursor-default bg-inkwell/35 backdrop-blur-sm lg:hidden"
-      />
+      {open && (
+        <button
+          type="button"
+          aria-label="Close navigation menu"
+          onClick={onClose}
+          className="fixed inset-0 z-30 h-full w-full cursor-default bg-inkwell/35 backdrop-blur-sm lg:hidden"
+        />
+      )}
 
       <aside
         id="ff-ai-nav"
         aria-label="AI planner navigation"
-        className="fixed top-14 bottom-0 left-0 z-40 flex w-[min(300px,86vw)] flex-col border-r border-line/80 bg-canvas p-5 shadow-[0_24px_60px_-25px_rgba(16,27,59,0.35)] lg:static lg:z-auto lg:w-[200px] lg:shrink-0 lg:border-r-0 lg:bg-transparent lg:p-0 lg:shadow-none"
+        className={cx(
+          'fixed top-14 bottom-0 left-0 z-40 flex w-[min(300px,86vw)] flex-col border-r border-line/80 bg-canvas p-5 shadow-[0_24px_60px_-25px_rgba(16,27,59,0.35)] lg:static lg:z-auto lg:w-[200px] lg:shrink-0 lg:border-r-0 lg:bg-transparent lg:p-0 lg:shadow-none',
+          !open && 'hidden lg:flex',
+        )}
       >
         <div className="flex items-center gap-3">
           <Link
@@ -138,6 +142,7 @@ function AiPlannerNav({ open, onClose, active, unread, user }) {
               <span className="block font-mono text-[0.54rem] tracking-[0.14em] text-dim uppercase">Back to dashboard</span>
             </span>
           </Link>
+          <LogoutButton className="mt-2" onNavigate={onClose} />
         </div>
       </aside>
     </>
@@ -342,7 +347,7 @@ export default function AiPlanner() {
             aria-expanded={navOpen}
             aria-controls="ff-ai-nav"
             aria-label={navOpen ? 'Close navigation menu' : 'Open navigation menu'}
-            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-line bg-surface text-ink transition duration-150 hover:border-dim focus-visible:ring-2 focus-visible:ring-amber/35 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas focus-visible:outline-none"
+            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-line bg-surface text-ink transition duration-150 hover:border-dim focus-visible:ring-2 focus-visible:ring-amber/35 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas focus-visible:outline-none lg:hidden"
           >
             <MenuIcon open={navOpen} className="h-4 w-4" />
           </button>

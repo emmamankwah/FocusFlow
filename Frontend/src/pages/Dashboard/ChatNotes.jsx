@@ -329,6 +329,22 @@ export function ChatSection({
             </p>
           </Panel>
 
+          <div className="min-w-0 lg:hidden">
+            <div className="ffd-nav-scroll flex gap-1.5 overflow-x-auto pb-1">
+              {quickPrompts.map((prompt) => (
+                <button
+                  key={prompt}
+                  type="button"
+                  onClick={() => onAsk(prompt)}
+                  disabled={pending}
+                  className="shrink-0 rounded-full border border-line px-3 py-1 text-[0.7rem] font-semibold text-dim transition hover:border-amber/50 hover:text-amber disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {prompt}
+                </button>
+              ))}
+            </div>
+          </div>
+
           <div className="hidden min-h-0 flex-col gap-4 lg:flex">
             <Panel title="Quick prompts" hint="Get started" className="shrink-0">
               <div className="flex flex-wrap gap-1.5">
