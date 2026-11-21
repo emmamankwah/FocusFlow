@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import usePageTitle from '@/lib/usePageTitle'
 import { buildPlannerContext, sendPlannerMessage } from '@/lib/ai'
-import { getSessionUser, logout } from '@/lib/authApi'
+import { getSessionUser } from '@/lib/authApi'
 import { useTheme } from '@/lib/theme'
 import './dashboard.css'
 import {
@@ -365,7 +365,7 @@ function WorkInboxSection({ queue, tasks, onPost, onSchedule, onRemove }) {
   )
 }
 
-function UserCard({ user, onLogout }) {
+function UserCard({ user }) {
   return (
     <div className="flex items-center gap-2.5 rounded-xl border border-line/80 bg-surface/70 p-2.5 lg:w-full">
       <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full border border-amber/30 bg-amber/10 font-grotesk text-[0.7rem] font-bold text-amber">
@@ -379,19 +379,11 @@ function UserCard({ user, onLogout }) {
           {user?.persona || 'Student'}
         </span>
       </span>
-      <button
-        type="button"
-        onClick={onLogout}
-        title="Log out"
-        className="shrink-0 rounded-lg px-2 py-1 font-mono text-[0.54rem] tracking-[0.12em] text-dim uppercase transition-colors hover:bg-deck/70 hover:text-ink"
-      >
-        Log out
-      </button>
     </div>
   )
 }
 
-function DashboardRail({ active, onNav, unread, user, onLogout, theme, onTheme, railHidden }) {
+function DashboardRail({ active, onNav, unread, user, theme, onTheme, railHidden }) {
   const [menuOpen, setMenuOpen] = useState(false)
   const menuRef = useRef(null)
   const menuButtonRef = useRef(null)
@@ -525,13 +517,13 @@ function DashboardRail({ active, onNav, unread, user, onLogout, theme, onTheme, 
           </nav>
 
           <div className="mt-2 border-t border-line/60 px-1 pt-3 pb-1 lg:hidden">
-            <UserCard user={user} onLogout={onLogout} />
+            <UserCard user={user} />
             <ThemeSwitcher theme={theme} onChange={onTheme} className="mt-2" />
           </div>
         </div>
 
         <div className="hidden lg:block">
-          <UserCard user={user} onLogout={onLogout} />
+          <UserCard user={user} />
           <ThemeSwitcher theme={theme} onChange={onTheme} className="mt-2" />
         </div>
       </div>
@@ -545,7 +537,6 @@ export default function Dashboard() {
   const today = useMemo(() => new Date(), [])
   const user = useMemo(() => getSessionUser(), [])
   const [theme, setTheme] = useTheme()
-  const navigate = useNavigate()
   const [board, setBoard] = useState(() => loadBoard(today))
   const [active, setActive] = useState('sec-focus')
   const [toast, setToast] = useState('')
@@ -972,10 +963,6 @@ export default function Dashboard() {
           theme={theme}
           onTheme={setTheme}
           railHidden={railHidden}
-          onLogout={() => {
-            logout()
-            navigate('/login', { replace: true })
-          }}
         />
 
         <main className="ff-main mt-5 min-w-0 lg:mt-0">
