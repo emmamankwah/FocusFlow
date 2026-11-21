@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { getToken, onUnauthorized } from '@/lib/api'
-import { logout, validateSession } from '@/lib/auth'
+import { logout, validateSession } from '@/lib/authApi'
 import PageLoader from './PageLoader'
 
 export default function ProtectedRoute({ children }) {

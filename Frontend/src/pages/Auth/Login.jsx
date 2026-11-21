@@ -6,7 +6,6 @@ import usePageTitle from '@/lib/usePageTitle'
 import { getPendingEmail, login } from '@/lib/authApi'
 import AuthLayout from '@/components/AuthLayout'
 import TextField from '@/components/TextField'
-import Checkbox from '@/components/Checkbox'
 import SubmitButton from '@/components/SubmitButton'
 import FormError from '@/components/FormError'
 import Divider from '@/components/Divider'
@@ -23,7 +22,7 @@ export default function Login() {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
-  } = useForm({ defaultValues: { email: '', password: '', remember: true } })
+  } = useForm({ defaultValues: { email: '', password: '' } })
 
   const onSubmit = async (data) => {
     setApiError(null)
@@ -93,8 +92,7 @@ export default function Login() {
           registration={register('password', { required: 'Enter your password.' })}
         />
 
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <Checkbox id="remember" label="Keep me signed in" registration={register('remember')} />
+        <div className="flex justify-end">
           <Link
             to="/forgot-password"
             className="text-[0.84rem] font-semibold text-cobalt underline underline-offset-4 hover:text-cobalt/80"

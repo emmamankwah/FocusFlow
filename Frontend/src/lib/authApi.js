@@ -4,11 +4,15 @@ const SESSION_USER_KEY = 'focusflow-session-user'
 const PENDING_EMAIL_KEY = 'focusflow-pending-email'
 const RESET_EMAIL_KEY = 'focusflow-reset-email'
 
+// Remove profile data persisted by older versions. Authenticated state belongs
+// to this tab and is discarded automatically when the tab closes.
+localStorage.removeItem(SESSION_USER_KEY)
+
 const normalizeEmail = (email = '') => email.trim()
 
 export function getSessionUser() {
   try {
-    return JSON.parse(localStorage.getItem(SESSION_USER_KEY))
+    return JSON.parse(sessionStorage.getItem(SESSION_USER_KEY))
   } catch {
     return null
   }
@@ -35,16 +39,16 @@ export async function signup(values) {
   return result
 }
 
-export async function login({ email, password, remember = true }) {
+export async function login({ email, password }) {
   const result = await apiPost('/auth/login', {
     email: normalizeEmail(email),
     password,
   })
-  setToken(result.access_token, remember !== false)
+  setToken(result.access_token)
 
   try {
     const user = await apiGet('/auth/profile')
-    localStorage.setItem(SESSION_USER_KEY, JSON.stringify(user))
+    sessionStorage.setItem(SESSION_USER_KEY, JSON.stringify(user))
     return user
   } catch (error) {
     logout()
@@ -82,13 +86,14 @@ export async function resetPassword({ email, otp, password }) {
 export function logout() {
   setToken(null)
   localStorage.removeItem(SESSION_USER_KEY)
+  sessionStorage.removeItem(SESSION_USER_KEY)
 }
 
 export async function validateSession() {
   if (!getToken()) return false
   try {
     const user = await apiGet('/auth/profile')
-    localStorage.setItem(SESSION_USER_KEY, JSON.stringify(user))
+    sessionStorage.setItem(SESSION_USER_KEY, JSON.stringify(user))
     return true
   } catch {
     logout()
