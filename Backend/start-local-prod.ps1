@@ -1,3 +1,5 @@
+param([switch]$Reload)
+
 $ErrorActionPreference = "Stop"
 
 Set-Location $PSScriptRoot
@@ -24,19 +26,43 @@ if (-not $postgres) {
     throw "PostgreSQL is not reachable at localhost:5432. Start your local PostgreSQL service first."
 }
 
-if (-not (Get-Command docker -ErrorAction SilentlyContinue)) {
-    throw "Docker is required to start local Redis. Install and start Docker Desktop, then run this script again."
+$docker = Get-Command docker -ErrorAction SilentlyContinue
+if (-not $docker) {
+    throw "Docker CLI is not available on PATH. Install Docker Desktop, then open a new terminal."
 }
 
 docker info *> $null
-if ($LASTEXITCODE -ne 0) {
-    throw "Docker is installed but its engine is not running. Start Docker Desktop, then run this script again."
+$engineRunning = $LASTEXITCODE -eq 0
+if (-not $engineRunning) {
+    $dockerDesktop = Join-Path $env:ProgramFiles "Docker\Docker\Docker Desktop.exe"
+    if (-not (Test-Path $dockerDesktop)) {
+        throw "Docker Desktop was not found at the default install path: $dockerDesktop"
+    }
+
+    if (-not (Get-Process -Name "Docker Desktop" -ErrorAction SilentlyContinue)) {
+        Start-Process -FilePath $dockerDesktop
+    }
+
+    Write-Host "Waiting for Docker Desktop to start..."
+    for ($attempt = 0; $attempt -lt 60; $attempt++) {
+        Start-Sleep -Seconds 2
+        docker info *> $null
+        if ($LASTEXITCODE -eq 0) {
+            $engineRunning = $true
+            break
+        }
+    }
 }
 
-docker compose -f compose.redis.yml up -d --wait redis
-if ($LASTEXITCODE -ne 0) {
-    throw "Could not start Redis. Check Docker Desktop and try again."
+if (-not $engineRunning) {
+    throw "Docker Desktop did not become ready within two minutes. Open it and check its status, then retry."
 }
 
-python -m uvicorn main:app --host 127.0.0.1 --port 8000
+$uvicornArgs = @("-m", "uvicorn", "main:app", "--host", "127.0.0.1", "--port", "8000")
+if ($Reload) {
+    $uvicornArgs += "--reload"
+}
+
+python @uvicornArgs
 exit $LASTEXITCODE
+$

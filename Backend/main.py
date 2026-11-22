@@ -1,5 +1,6 @@
 import logging
 import os
+import subprocess
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -20,8 +21,35 @@ load_dotenv(Path(__file__).resolve().parent / ".env")
 logger = logging.getLogger(__name__)
 
 
+def _start_local_redis() -> None:
+    enabled = os.getenv("LOCAL_START_REDIS", "").strip().lower()
+    if enabled not in {"1", "true", "yes", "on"}:
+        return
+
+    compose_file = Path(__file__).resolve().parent / "compose.redis.yml"
+    try:
+        subprocess.run(
+            ["docker", "compose", "-f", str(compose_file), "up", "-d", "--wait", "redis"],
+            check=True,
+            timeout=90,
+        )
+    except FileNotFoundError as exc:
+        raise RuntimeError(
+            "LOCAL_START_REDIS is enabled, but Docker is not installed or available on PATH."
+        ) from exc
+    except subprocess.TimeoutExpired as exc:
+        raise RuntimeError("Timed out while starting local Redis with Docker Compose.") from exc
+    except subprocess.CalledProcessError as exc:
+        raise RuntimeError(
+            "Could not start local Redis. Make sure Docker Desktop is running."
+        ) from exc
+
+    logger.info("Local Redis is running.")
+
+
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
+    _start_local_redis()
     if rag_config.WARMUP:
         try:
             rag_embeddings.warmup()
@@ -80,5 +108,5 @@ if __name__ == "__main__":
         "main:app",
         host="127.0.0.1",
         port=8000,
-        reload=True,
+        reload=False,
     )
