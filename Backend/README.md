@@ -33,8 +33,15 @@ network access; later runs reuse the cached model.
 
 ## Run
 
-Start the API from this directory:
+For local development on Windows, install and start Docker Desktop, then start
+the API and its Redis rate-limit service together from this directory:
 
 ```powershell
-python -m uvicorn main:app --reload
+./start-dev.ps1
 ```
+
+The script starts Redis from `compose.redis.yml` and then runs the API. Redis
+stays running if the API process stops; stop it with `./stop-dev.ps1`. The
+default backend URL (`redis://localhost:6379/0`) connects to this local Redis
+container. You can still run the API directly with `python -m uvicorn
+main:app --reload` when Redis is already running.
