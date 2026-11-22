@@ -39,6 +39,7 @@ def _payload(email: str, username: str, password: str = PASSWORD) -> dict:
         "username": username,
         "password": password,
         "confirmPassword": password,
+        "user_type": "student",
     }
 
 

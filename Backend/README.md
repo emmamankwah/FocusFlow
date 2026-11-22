@@ -1,5 +1,12 @@
 # FocusFlow Backend
 
+## Database schema updates
+
+For an existing database, apply numbered SQL updates from `schema` in order.
+The `schema/003_user_type.sql` migration adds the signup user type to verified
+and pending accounts. Fresh databases should be initialized from
+`schema/000_auth.sql` and the remaining schema files.
+
 ## Install
 
 From the backend directory, install the full application requirements:

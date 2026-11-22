@@ -1,7 +1,7 @@
 """Pydantic models for the authentication flow."""
 
 import re
-from typing import Annotated
+from typing import Annotated, Literal
 
 from email_validator import EmailNotValidError, validate_email
 from pydantic import (
@@ -86,6 +86,7 @@ class UserRegister(PasswordValidation):
     )
     password: str
     confirmPassword: str
+    user_type: Literal["student", "working_professional", "both", "other"]
 
     @model_validator(mode="after")
     def passwords_match(self) -> "UserRegister":
@@ -155,3 +156,4 @@ class UserPublic(BaseModel):
     lastName: str
     username: str
     email: str
+    user_type: Literal["student", "working_professional", "both", "other"]
