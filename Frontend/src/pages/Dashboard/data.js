@@ -2,16 +2,18 @@ export const STORAGE_KEY = 'focusflow-dashboard-v1'
 export const FOCUS_GOAL_HOURS = 4
 export const WEEKLY_GOAL_HOURS = 25
 
+export const navGroups = ['Plan', 'Insights', 'Account']
+
 export const sections = [
-  { id: 'sec-overview', label: 'Overview' },
-  { id: 'sec-work', label: 'Work Inbox' },
-  { id: 'sec-focus', label: 'Today' },
-  { id: 'sec-ai', label: 'Suggestions' },
-  { id: 'sec-deadlines', label: 'Deadlines' },
-  { id: 'sec-wellbeing', label: 'Wellbeing' },
-  { id: 'sec-progress', label: 'Progress' },
-  { id: 'sec-chat', label: 'Planner chat', to: '/ai-planner' },
-  { id: 'sec-notes', label: 'Notifications' },
+  { id: 'sec-work', label: 'Work Inbox', icon: 'inbox', group: 'Plan' },
+  { id: 'sec-focus', label: 'Today', icon: 'calendar', group: 'Plan' },
+  { id: 'sec-ai', label: 'Suggestions', icon: 'spark', group: 'Insights' },
+  { id: 'sec-deadlines', label: 'Deadlines', icon: 'clipboard', group: 'Insights' },
+  { id: 'sec-wellbeing', label: 'Wellbeing', icon: 'heart', group: 'Insights' },
+  { id: 'sec-progress', label: 'Progress', icon: 'chart', group: 'Insights' },
+  { id: 'sec-chat', label: 'Planner chat', icon: 'send', group: 'Account', to: '/ai-planner' },
+  { id: 'sec-notes', label: 'Notifications', icon: 'bell', group: 'Account' },
+  { id: 'sec-settings', label: 'Settings', icon: 'gear', group: 'Account' },
 ]
 
 export const baseTasks = [

@@ -19,7 +19,7 @@ def get_user_by_email(email:str) -> dict |None:
     try:
         with connection.cursor(cursor_factory=RealDictCursor) as cursor:
             cursor.execute(
-                "SELECT u.id, u.first_name, u.last_name, u.email, u.username, "
+                "SELECT u.id, u.first_name, u.last_name, u.email, u.username, u.user_type, "
                 "u.password, COALESCE(v.version, 0) AS token_version "
                 "FROM users u "
                 "LEFT JOIN user_token_versions v ON v.user_id = u.id "
@@ -36,7 +36,7 @@ def get_user_by_id(user_id: int) -> dict | None:
     try:
         with connection.cursor(cursor_factory=RealDictCursor) as cursor:
             cursor.execute(
-                "SELECT u.id, u.first_name, u.last_name, u.email, u.username, "
+                "SELECT u.id, u.first_name, u.last_name, u.email, u.username, u.user_type, "
                 "u.password, COALESCE(v.version, 0) AS token_version "
                 "FROM users u "
                 "LEFT JOIN user_token_versions v ON v.user_id = u.id "
@@ -61,14 +61,14 @@ def get_user_by_username(username: str) -> dict | None:
         connection.close()
 
 
-def create_user(first_name, last_name, email, username, hash_password):
+def create_user(first_name, last_name, email, username, hash_password, user_type="other"):
     connection = _connect()
     try:
         with connection.cursor() as cursor:
             cursor.execute(
-                "INSERT INTO users (first_name, last_name, email, username, password) "
-                "VALUES (%s, %s, %s, %s, %s)",
-                (first_name, last_name, email, username, hash_password),
+                "INSERT INTO users (first_name, last_name, email, username, password, user_type) "
+                "VALUES (%s, %s, %s, %s, %s, %s)",
+                (first_name, last_name, email, username, hash_password, user_type),
             )
         connection.commit()
     except Exception:
@@ -80,7 +80,7 @@ def create_user(first_name, last_name, email, username, hash_password):
 
 
 
-def save_pending_user(first_name, last_name, email, username, hash_password):
+def save_pending_user(first_name, last_name, email, username, hash_password, user_type):
     connection = _connect()
     try:
         with connection.cursor() as cursor:
@@ -88,10 +88,10 @@ def save_pending_user(first_name, last_name, email, username, hash_password):
             # pending row exists, so this is a plain insert.
             cursor.execute(
                 """
-                INSERT INTO pending_users (first_name, last_name, email, username, password)
-                VALUES (%s, %s, %s, %s, %s)
+                INSERT INTO pending_users (first_name, last_name, email, username, password, user_type)
+                VALUES (%s, %s, %s, %s, %s, %s)
                 """,
-                (first_name, last_name, email, username, hash_password),
+                (first_name, last_name, email, username, hash_password, user_type),
             )
         connection.commit()
     except psycopg2.errors.UniqueViolation as exc:
@@ -126,7 +126,7 @@ def move_pending_user_to_users(email: str) -> None:
     try:
         with connection.cursor(cursor_factory=RealDictCursor) as cursor:
             cursor.execute(
-                "SELECT first_name, last_name, email, username, password "
+                "SELECT first_name, last_name, email, username, password, user_type "
                 "FROM pending_users WHERE email = %s",
                 (email,),
             )
@@ -134,14 +134,15 @@ def move_pending_user_to_users(email: str) -> None:
             if not pending_user:
                 raise ValueError("No pending user found for this email.")
             cursor.execute(
-                "INSERT INTO users (first_name, last_name, email, username, password) "
-                "VALUES (%s, %s, %s, %s, %s)",
+                "INSERT INTO users (first_name, last_name, email, username, password, user_type) "
+                "VALUES (%s, %s, %s, %s, %s, %s)",
                 (
                     pending_user["first_name"],
                     pending_user["last_name"],
                     pending_user["email"],
                     pending_user["username"],
                     pending_user["password"],
+                    pending_user["user_type"],
                 ),
             )
             cursor.execute("DELETE FROM pending_users WHERE email = %s", (email,),)

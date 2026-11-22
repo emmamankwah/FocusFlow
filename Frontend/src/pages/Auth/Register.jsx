@@ -34,6 +34,7 @@ export default function Register() {
       email: '',
       password: '',
       confirmPassword: '',
+      user_type: '',
       terms: false,
     },
   })
@@ -104,6 +105,36 @@ export default function Register() {
           error={errors.email}
           registration={register('email', emailRules)}
         />
+
+        <fieldset className="space-y-2" aria-describedby={errors.user_type ? 'user-type-error' : undefined}>
+          <legend className="text-[0.82rem] font-medium text-inkwell">What best describes you?</legend>
+          <div className="grid gap-2 sm:grid-cols-2">
+            {[
+              ['student', 'Student'],
+              ['working_professional', 'Working professional'],
+              ['both', 'Both'],
+              ['other', 'Other'],
+            ].map(([value, label]) => (
+              <label
+                key={value}
+                className="group flex cursor-pointer items-center gap-2.5 rounded-xl border border-inkwell/15 bg-white/60 px-3 py-2.5 transition hover:border-cobalt/50 has-[:checked]:border-cobalt has-[:checked]:bg-cobalt/5"
+              >
+                <input
+                  type="radio"
+                  value={value}
+                  className="h-4 w-4 accent-cobalt focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cobalt"
+                  {...register('user_type', { required: 'Choose the option that best describes you.' })}
+                />
+                <span className="text-[0.82rem] text-inkwell/80">{label}</span>
+              </label>
+            ))}
+          </div>
+          {errors.user_type && (
+            <p id="user-type-error" role="alert" className="text-[0.76rem] font-medium text-[#b42318]">
+              {errors.user_type.message}
+            </p>
+          )}
+        </fieldset>
 
         <div>
           <TextField

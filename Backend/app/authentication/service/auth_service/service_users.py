@@ -228,6 +228,7 @@ def register_user(user_data: UserRegister) -> Dict[str, str]:
             email,
             username,
             hash_password(user_data.password),
+            user_data.user_type,
         )
     except ValueError as exc:
         return {"error": str(exc)}
@@ -280,6 +281,7 @@ def get_profile(user_id: int) -> Dict[str, object]:
         lastName=user["last_name"],
         username=user["username"],
         email=user["email"],
+        user_type=user["user_type"],
     )
     return profile.model_dump()
 

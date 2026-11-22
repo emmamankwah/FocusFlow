@@ -6,7 +6,9 @@ CREATE TABLE IF NOT EXISTS users (
     last_name VARCHAR(100) NOT NULL,
     email VARCHAR(255) NOT NULL UNIQUE,
     username VARCHAR(100) NOT NULL UNIQUE,
-    password TEXT NOT NULL
+    password TEXT NOT NULL,
+    user_type VARCHAR(32) NOT NULL DEFAULT 'other'
+        CHECK (user_type IN ('student', 'working_professional', 'both', 'other'))
 );
 
 CREATE TABLE IF NOT EXISTS pending_users (
@@ -14,7 +16,9 @@ CREATE TABLE IF NOT EXISTS pending_users (
     first_name VARCHAR(100) NOT NULL,
     last_name VARCHAR(100) NOT NULL,
     username VARCHAR(100) NOT NULL UNIQUE,
-    password TEXT NOT NULL
+    password TEXT NOT NULL,
+    user_type VARCHAR(32) NOT NULL DEFAULT 'other'
+        CHECK (user_type IN ('student', 'working_professional', 'both', 'other'))
 );
 
 CREATE TABLE IF NOT EXISTS otp_table (

@@ -1,7 +1,7 @@
 const BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/+$/, '')
 
 export function getToken() {
-  return localStorage.getItem('token') || sessionStorage.getItem('token')
+  return sessionStorage.getItem('token')
 }
 
 const unauthorizedListeners = new Set()
@@ -21,13 +21,16 @@ function notifyUnauthorized() {
   }
 }
 
-export function setToken(token, persist = true) {
+export function setToken(token) {
+  // Remove tokens saved by older versions that supported persistent login.
   localStorage.removeItem('token')
   sessionStorage.removeItem('token')
   if (!token) return
-  if (persist) localStorage.setItem('token', token)
-  else sessionStorage.setItem('token', token)
+  sessionStorage.setItem('token', token)
 }
+
+// Clear legacy persisted credentials as soon as the API module is loaded.
+localStorage.removeItem('token')
 
 function firstMessage(value) {
   return typeof value === 'string' && value.trim() ? value : null

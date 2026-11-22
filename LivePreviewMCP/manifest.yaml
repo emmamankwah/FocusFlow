@@ -1,0 +1,4 @@
+name: live-preview
+description: Provides a live preview of the frontend by tunneling the Vite dev server over ngrok and exposing an embed URL.
+entrypoint: preview_server.py
+type: http

@@ -1,5 +1,6 @@
 import logging
 import os
+import subprocess
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -13,6 +14,7 @@ from app.ai.rag import config as rag_config
 from app.ai.rag import embeddings as rag_embeddings
 from app.ai.rag.routes.rag import router as rag_router
 from app.authentication.routes.auth.auth_user import router as auth_router
+from app.ai.planner.router import router as planner_router
 from app.authentication.security.rate_limit import RateLimitUnavailable
 
 load_dotenv(Path(__file__).resolve().parent / ".env")
@@ -20,8 +22,35 @@ load_dotenv(Path(__file__).resolve().parent / ".env")
 logger = logging.getLogger(__name__)
 
 
+def _start_local_redis() -> None:
+    enabled = os.getenv("LOCAL_START_REDIS", "").strip().lower()
+    if enabled not in {"1", "true", "yes", "on"}:
+        return
+
+    compose_file = Path(__file__).resolve().parent / "compose.redis.yml"
+    try:
+        subprocess.run(
+            ["docker", "compose", "-f", str(compose_file), "up", "-d", "--wait", "redis"],
+            check=True,
+            timeout=90,
+        )
+    except FileNotFoundError as exc:
+        raise RuntimeError(
+            "LOCAL_START_REDIS is enabled, but Docker is not installed or available on PATH."
+        ) from exc
+    except subprocess.TimeoutExpired as exc:
+        raise RuntimeError("Timed out while starting local Redis with Docker Compose.") from exc
+    except subprocess.CalledProcessError as exc:
+        raise RuntimeError(
+            "Could not start local Redis. Make sure Docker Desktop is running."
+        ) from exc
+
+    logger.info("Local Redis is running.")
+
+
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
+    _start_local_redis()
     if rag_config.WARMUP:
         try:
             rag_embeddings.warmup()
@@ -61,6 +90,7 @@ app.add_middleware(
 app.include_router(auth_router)
 app.include_router(ai_router, prefix="/ai")
 app.include_router(rag_router)
+app.include_router(planner_router, prefix="/ai/planner")
 
 
 @app.get("/")
@@ -80,5 +110,5 @@ if __name__ == "__main__":
         "main:app",
         host="127.0.0.1",
         port=8000,
-        reload=True,
+        reload=False,
     )

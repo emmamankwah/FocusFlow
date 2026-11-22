@@ -1,3 +1,5 @@
+import { useNavigate } from 'react-router-dom'
+import { logout } from '@/lib/authApi'
 import { THEMES } from '@/lib/theme'
 
 export function cx(...parts) {
@@ -12,6 +14,28 @@ export const BTN_PRIMARY =
 
 export const BTN_QUIET =
   'inline-flex items-center justify-center gap-1.5 rounded-lg border border-transparent bg-transparent px-2.5 py-1 text-[0.72rem] font-semibold text-dim transition hover:border-line hover:text-ink disabled:cursor-not-allowed disabled:opacity-45'
+
+export function LogoutButton({ className = '', onNavigate }) {
+  const navigate = useNavigate()
+
+  return (
+    <button
+      type="button"
+      onClick={() => {
+        logout()
+        onNavigate?.()
+        navigate('/login', { replace: true })
+      }}
+      className={cx(
+        'group flex min-h-9 w-full items-center gap-2.5 rounded-lg border border-transparent px-2.5 py-2 text-left font-mono text-[0.63rem] tracking-[0.13em] text-dim uppercase transition duration-150 hover:border-[#dc2626]/40 hover:bg-[#dc2626]/10 hover:text-[#dc2626] focus-visible:ring-2 focus-visible:ring-[#dc2626]/40 focus-visible:outline-none',
+        className,
+      )}
+    >
+      <LogoutIcon className="h-3.5 w-3.5 shrink-0 text-dim/70 transition-colors group-hover:text-[#dc2626]" />
+      <span className="min-w-0 flex-1 truncate">Log out</span>
+    </button>
+  )
+}
 
 export function BrandMark({ className = '' }) {
   return (
@@ -134,7 +158,7 @@ export function Panel({ id, title, hint, action, children, className = '', ariaL
       aria-labelledby={title ? `${id}-title` : undefined}
       aria-label={title ? undefined : ariaLabel}
       className={cx(
-        'ffd-section relative overflow-hidden rounded-2xl border border-line/80 bg-surface/80 p-5 shadow-[0_24px_60px_-45px_rgba(16,27,59,0.4)]',
+        'ffd-section relative rounded-2xl border border-line/80 bg-surface/80 p-5 shadow-[0_24px_60px_-45px_rgba(16,27,59,0.4)]',
         className,
       )}
     >
@@ -343,6 +367,77 @@ export function SendIcon({ className = '' }) {
       strokeWidth="1.6"
     >
       <path d="M2.3 2.6 14 8 2.3 13.4l1.1-4.6 6.1-1.8-6.1-1.8-1.1-2.6Z" />
+    </svg>
+  )
+}
+
+export function HeartIcon({ className = '' }) {
+  return (
+    <svg
+      viewBox="0 0 16 16"
+      aria-hidden="true"
+      className={className}
+      fill="none"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="1.6"
+    >
+      <path d="M8 13.2 3.6 8.9a2.7 2.7 0 0 1 3.8-3.8L8 5.7l.6-.6a2.7 2.7 0 0 1 3.8 3.8L8 13.2Z" />
+    </svg>
+  )
+}
+
+export function BellIcon({ className = '' }) {
+  return (
+    <svg
+      viewBox="0 0 16 16"
+      aria-hidden="true"
+      className={className}
+      fill="none"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="1.6"
+    >
+      <path d="M5.2 10.6V7a2.8 2.8 0 0 1 5.6 0v3.6l1 1.4H4.2l1-1.4Z" />
+      <path d="M6.7 13.5a1.4 1.4 0 0 0 2.6 0M8 2.4V1.7" />
+    </svg>
+  )
+}
+
+export function GearIcon({ className = '' }) {
+  return (
+    <svg
+      viewBox="0 0 16 16"
+      aria-hidden="true"
+      className={className}
+      fill="none"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="1.6"
+    >
+      <path d="M6 2.4h4l.5 1.4 1.2.5 1.3-.7 1.5 2.2-.8 1.1v1.6l.8 1.1-1.5 2.2-1.3-.7-1.2.5-.5 1.4H6l-.5-1.4-1.2-.5-1.3.7L1.5 8.5l.8-1.1V5.8l-.8-1.1L3 2.5l1.3.7 1.2-.5.5-1.3Z" />
+      <circle cx="8" cy="7.7" r="1.9" />
+    </svg>
+  )
+}
+
+export function LogoutIcon({ className = '' }) {
+  return (
+    <svg
+      viewBox="0 0 16 16"
+      aria-hidden="true"
+      className={className}
+      fill="none"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="1.6"
+    >
+      <path d="M6.4 2.8H4.3a1.3 1.3 0 0 0-1.3 1.3v7.8a1.3 1.3 0 0 0 1.3 1.3h2.1" />
+      <path d="M9.4 5.2 12.2 8l-2.8 2.8M12 8H6.6" />
     </svg>
   )
 }

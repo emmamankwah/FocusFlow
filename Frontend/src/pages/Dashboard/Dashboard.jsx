@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import usePageTitle from '@/lib/usePageTitle'
 import { buildPlannerContext, sendPlannerMessage } from '@/lib/ai'
-import { getSessionUser, logout } from '@/lib/authApi'
+import { getSessionUser } from '@/lib/authApi'
 import { useTheme } from '@/lib/theme'
 import './dashboard.css'
 import {
@@ -15,6 +15,7 @@ import {
   loadBoard,
   makeNotes,
   makeSuggestions,
+  navGroups,
   riskStyles,
   saveBoard,
   sections,
@@ -23,15 +24,23 @@ import {
   userInitials,
 } from './data.js'
 import {
+  BellIcon,
   BrandMark,
   BTN,
   BTN_PRIMARY,
   BTN_QUIET,
+  CalendarIcon,
+  ChartIcon,
   CheckIcon,
+  ClipboardIcon,
+  GearIcon,
+  HeartIcon,
+  InboxIcon,
+  LogoutButton,
   MenuIcon,
   Panel,
   SectionLabel,
-  SidebarIcon,
+  SendIcon,
   SparkIcon,
   ThemeSwitcher,
   cx,
@@ -54,6 +63,18 @@ const initialChat = (name) => [
 
 function prefersReducedMotion() {
   return window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
+}
+
+const navIcons = {
+  inbox: InboxIcon,
+  calendar: CalendarIcon,
+  spark: SparkIcon,
+  clipboard: ClipboardIcon,
+  heart: HeartIcon,
+  chart: ChartIcon,
+  send: SendIcon,
+  bell: BellIcon,
+  gear: GearIcon,
 }
 
 function StatCell({ label, value, unit, note, meter, valueClass = '' }) {
@@ -365,7 +386,7 @@ function WorkInboxSection({ queue, tasks, onPost, onSchedule, onRemove }) {
   )
 }
 
-function UserCard({ user, onLogout }) {
+function UserCard({ user }) {
   return (
     <div className="flex items-center gap-2.5 rounded-xl border border-line/80 bg-surface/70 p-2.5 lg:w-full">
       <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full border border-amber/30 bg-amber/10 font-grotesk text-[0.7rem] font-bold text-amber">
@@ -376,115 +397,39 @@ function UserCard({ user, onLogout }) {
           {userFullName(user)}
         </span>
         <span className="block font-mono text-[0.54rem] tracking-[0.14em] text-dim uppercase">
-          {user?.persona || 'Student'}
+          {{
+            student: 'Student',
+            working_professional: 'Working professional',
+            both: 'Student and professional',
+            other: 'Other',
+          }[user?.user_type] || 'User'}
         </span>
       </span>
-      <button
-        type="button"
-        onClick={onLogout}
-        title="Log out"
-        className="shrink-0 rounded-lg px-2 py-1 font-mono text-[0.54rem] tracking-[0.12em] text-dim uppercase transition-colors hover:bg-deck/70 hover:text-ink"
-      >
-        Log out
-      </button>
     </div>
   )
 }
 
-function DashboardRail({ active, onNav, unread, user, onLogout, theme, onTheme, railHidden }) {
-  const [menuOpen, setMenuOpen] = useState(false)
-  const menuRef = useRef(null)
-  const menuButtonRef = useRef(null)
-
-  useEffect(() => {
-    if (!menuOpen) return undefined
-
-    const onKeyDown = (event) => {
-      if (event.key === 'Escape') {
-        setMenuOpen(false)
-        menuButtonRef.current?.focus()
-      }
-    }
-    const onPointerDown = (event) => {
-      if (
-        !menuRef.current?.contains(event.target) &&
-        !menuButtonRef.current?.contains(event.target)
-      ) {
-        setMenuOpen(false)
-      }
-    }
-    const desktop = window.matchMedia?.('(min-width: 64rem)')
-    const closeOnDesktop = () => {
-      if (desktop?.matches) setMenuOpen(false)
-    }
-
-    document.addEventListener('keydown', onKeyDown)
-    document.addEventListener('pointerdown', onPointerDown)
-    desktop?.addEventListener('change', closeOnDesktop)
-    return () => {
-      document.removeEventListener('keydown', onKeyDown)
-      document.removeEventListener('pointerdown', onPointerDown)
-      desktop?.removeEventListener('change', closeOnDesktop)
-    }
-  }, [menuOpen])
-
-  function handleNav(id) {
-    setMenuOpen(false)
-    requestAnimationFrame(() => onNav(id))
-  }
-
+function DashboardNavList({ active, onNav, onNavigate, unread }) {
   return (
-    <aside
-      id="ff-dashboard-rail"
-      className={cx(
-        'ff-rail relative lg:sticky lg:top-8',
-        railHidden && 'lg:hidden',
-      )}
+    <nav
+      aria-label="Dashboard sections"
+      className="ff-nav ffd-nav-scroll flex w-full flex-col gap-3 lg:gap-4"
     >
-      <div className="flex flex-col gap-3 lg:gap-5">
-        <div className="flex items-center justify-between gap-3">
-          <Link
-            to="/"
-            className="inline-flex min-w-0 items-center gap-2.5"
-            aria-label="FocusFlow home"
-          >
-            <BrandMark />
-            <span className="font-grotesk text-[1.05rem] font-bold tracking-[-0.02em] text-ink">
-              Focus<span className="text-amber">Flow</span>
-            </span>
-          </Link>
-          <button
-            ref={menuButtonRef}
-            type="button"
-            onClick={() => setMenuOpen((open) => !open)}
-            aria-expanded={menuOpen}
-            aria-controls="ff-dashboard-menu"
-            aria-label={menuOpen ? 'Close dashboard menu' : 'Open dashboard menu'}
-            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-line bg-surface text-ink transition duration-150 hover:border-dim focus-visible:ring-2 focus-visible:ring-amber/35 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas focus-visible:outline-none lg:hidden"
-          >
-            <MenuIcon open={menuOpen} className="h-4 w-4" />
-          </button>
-        </div>
-
-        <div
-          id="ff-dashboard-menu"
-          ref={menuRef}
-          className={cx(
-            'ffd-menu absolute top-full right-0 z-30 mt-2 max-h-[calc(100vh-6rem)] w-[min(280px,calc(100vw-2rem))] overflow-y-auto rounded-2xl border border-line/80 bg-surface p-2 shadow-[0_24px_60px_-30px_rgba(16,27,59,0.35)] lg:static lg:mt-0 lg:w-full lg:overflow-visible lg:rounded-none lg:border-0 lg:bg-transparent lg:p-0 lg:shadow-none lg:contents',
-            menuOpen ? 'block' : 'hidden',
-          )}
-        >
-          <nav
-            aria-label="Dashboard sections"
-            className="ff-nav ffd-nav-scroll grid w-full gap-1 lg:flex lg:flex-col"
-          >
-            {sections.map((section) => {
+      {navGroups.map((group) => (
+        <div key={group} className="flex flex-col gap-1">
+          <span className="px-2.5 font-mono text-[0.55rem] tracking-[0.18em] text-dim/70 uppercase">
+            {group}
+          </span>
+          {sections
+            .filter((section) => section.group === group)
+            .map((section) => {
               const isActive = active === section.id
+              const Icon = navIcons[section.icon]
               const className = cx(
-                'flex min-h-9 shrink-0 items-center justify-between gap-2 rounded-lg border-l-2 px-3 py-2 text-left font-mono text-[0.63rem] tracking-[0.13em] uppercase transition lg:w-full',
+                'group flex min-h-9 w-full items-center gap-2.5 rounded-lg border px-2.5 py-2 text-left font-mono text-[0.63rem] tracking-[0.13em] uppercase transition duration-150',
                 isActive
-                  ? 'border-amber bg-amber/10 text-amber'
-                  : 'border-transparent text-dim hover:bg-deck/60 hover:text-ink',
+                  ? 'border-amber/25 bg-amber/10 text-amber'
+                  : 'border-transparent text-dim hover:border-line/70 hover:bg-deck/60 hover:text-ink',
               )
               const unreadBadge = section.id === 'sec-notes' && unread > 0 && (
                 <span
@@ -494,16 +439,25 @@ function DashboardRail({ active, onNav, unread, user, onLogout, theme, onTheme, 
                   {unread}
                 </span>
               )
+              const icon = (
+                <Icon
+                  className={cx(
+                    'h-3.5 w-3.5 shrink-0 transition-colors',
+                    isActive ? 'text-amber' : 'text-dim/70 group-hover:text-ink',
+                  )}
+                />
+              )
 
               if (section.to) {
                 return (
                   <Link
                     key={section.id}
                     to={section.to}
-                    onClick={() => setMenuOpen(false)}
+                    onClick={() => onNavigate?.()}
                     className={className}
                   >
-                    <span>{section.label}</span>
+                    {icon}
+                    <span className="min-w-0 flex-1 truncate">{section.label}</span>
                     {unreadBadge}
                   </Link>
                 )
@@ -513,29 +467,125 @@ function DashboardRail({ active, onNav, unread, user, onLogout, theme, onTheme, 
                 <button
                   key={section.id}
                   type="button"
-                  onClick={() => handleNav(section.id)}
+                  onClick={() => onNav(section.id)}
                   aria-current={isActive ? 'true' : undefined}
                   className={className}
                 >
-                  <span>{section.label}</span>
+                  {icon}
+                  <span className="min-w-0 flex-1 truncate">{section.label}</span>
                   {unreadBadge}
                 </button>
               )
             })}
-          </nav>
+        </div>
+      ))}
+    </nav>
+  )
+}
 
-          <div className="mt-2 border-t border-line/60 px-1 pt-3 pb-1 lg:hidden">
-            <UserCard user={user} onLogout={onLogout} />
-            <ThemeSwitcher theme={theme} onChange={onTheme} className="mt-2" />
+function DashboardRail({ active, onNav, unread, user, open, onToggle, onClose }) {
+  const menuRef = useRef(null)
+  const menuButtonRef = useRef(null)
+
+  useEffect(() => {
+    if (!open) return undefined
+
+    const onKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        onClose()
+        menuButtonRef.current?.focus()
+      }
+    }
+    const onPointerDown = (event) => {
+      if (window.matchMedia?.('(min-width: 64rem)').matches) return
+      if (
+        !menuRef.current?.contains(event.target) &&
+        !menuButtonRef.current?.contains(event.target)
+      ) {
+        onClose()
+      }
+    }
+    document.addEventListener('keydown', onKeyDown)
+    document.addEventListener('pointerdown', onPointerDown)
+    return () => {
+      document.removeEventListener('keydown', onKeyDown)
+      document.removeEventListener('pointerdown', onPointerDown)
+    }
+  }, [open, onClose])
+
+  function handleNav(id) {
+    onClose()
+    requestAnimationFrame(() => onNav(id))
+  }
+
+  return (
+    <>
+      {open && (
+        <button
+          type="button"
+          aria-label="Close navigation menu"
+          onClick={onClose}
+          className="fixed inset-0 z-20 h-full w-full cursor-default bg-inkwell/35 backdrop-blur-sm lg:hidden"
+        />
+      )}
+
+      <aside
+        id="ff-dashboard-rail"
+        className={cx(
+          'ff-rail relative',
+          open
+            ? 'z-30 lg:sticky lg:top-8 lg:z-auto'
+            : 'lg:absolute lg:top-8 lg:left-8 lg:z-30',
+        )}
+      >
+        <div className="flex flex-col gap-3 lg:gap-5">
+          <div className="flex items-center justify-between gap-3 lg:flex-col lg:items-start">
+            <Link
+              to="/"
+              className={cx('inline-flex min-w-0 items-center gap-2.5', !open && 'lg:hidden')}
+              aria-label="FocusFlow home"
+            >
+              <BrandMark />
+              <span className="font-grotesk text-[1.05rem] font-bold tracking-[-0.02em] text-ink">
+                Focus<span className="text-amber">Flow</span>
+              </span>
+            </Link>
+            <button
+              ref={menuButtonRef}
+              type="button"
+              onClick={onToggle}
+              aria-expanded={open}
+              aria-controls="ff-dashboard-menu"
+              aria-label={open ? 'Close dashboard menu' : 'Open dashboard menu'}
+              className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-line bg-surface text-ink transition duration-150 hover:border-dim focus-visible:ring-2 focus-visible:ring-amber/35 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas focus-visible:outline-none"
+            >
+              <MenuIcon open={open} className="h-4 w-4" />
+            </button>
+          </div>
+
+          <div
+            id="ff-dashboard-menu"
+            ref={menuRef}
+            className={cx(
+              'ffd-menu absolute top-full left-0 z-30 mt-2 max-h-[calc(100dvh-6rem)] w-[min(280px,calc(100vw-2rem))] overflow-y-auto rounded-2xl border border-line/80 bg-surface p-2 shadow-[0_24px_60px_-30px_rgba(16,27,59,0.35)] lg:static lg:z-auto lg:mt-0 lg:max-h-none lg:w-full lg:overflow-visible lg:rounded-none lg:border-0 lg:bg-transparent lg:p-0 lg:shadow-none',
+              open ? 'block' : 'hidden',
+            )}
+          >
+            <DashboardNavList
+              active={active}
+              onNav={handleNav}
+              onNavigate={onClose}
+              unread={unread}
+            />
+
+            <div className="mt-2 border-t border-line/60 px-1 pt-3 pb-1">
+              <UserCard user={user} />
+              <LogoutButton className="mt-2" onNavigate={onClose} />
+            </div>
           </div>
         </div>
-
-        <div className="hidden lg:block">
-          <UserCard user={user} onLogout={onLogout} />
-          <ThemeSwitcher theme={theme} onChange={onTheme} className="mt-2" />
-        </div>
-      </div>
-    </aside>
+      </aside>
+    </>
   )
 }
 
@@ -545,19 +595,14 @@ export default function Dashboard() {
   const today = useMemo(() => new Date(), [])
   const user = useMemo(() => getSessionUser(), [])
   const [theme, setTheme] = useTheme()
-  const navigate = useNavigate()
   const [board, setBoard] = useState(() => loadBoard(today))
   const [active, setActive] = useState('sec-focus')
+  const [navOpen, setNavOpen] = useState(false)
   const [toast, setToast] = useState('')
   const toastTimer = useRef(null)
   const navLockRef = useRef(0)
-  const [railHidden, setRailHidden] = useState(() => {
-    try {
-      return localStorage.getItem('focusflow-rail-hidden') === '1'
-    } catch {
-      return false
-    }
-  })
+  const closeNav = useCallback(() => setNavOpen(false), [])
+  const toggleNav = useCallback(() => setNavOpen((open) => !open), [])
 
   const [addOpen, setAddOpen] = useState(false)
   const [form, setForm] = useState({ title: '', time: '16:00', duration: '45', type: 'focus' })
@@ -616,14 +661,6 @@ export default function Dashboard() {
   useEffect(() => {
     saveBoard(board, today)
   }, [board, today])
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('focusflow-rail-hidden', railHidden ? '1' : '0')
-    } catch {
-      // Preference only; ignore unavailable storage.
-    }
-  }, [railHidden])
 
   useEffect(() => () => clearTimeout(toastTimer.current), [])
 
@@ -961,7 +998,7 @@ export default function Dashboard() {
       <div
         className={cx(
           'relative mx-auto w-full max-w-[1320px] px-4 py-6 sm:px-6 lg:grid lg:items-start lg:gap-8 lg:px-8 lg:py-8',
-          railHidden ? 'lg:grid-cols-1' : 'lg:grid-cols-[200px_minmax(0,1fr)]',
+          navOpen ? 'lg:grid-cols-[200px_minmax(0,1fr)]' : 'lg:grid-cols-[minmax(0,1fr)]',
         )}
       >
         <DashboardRail
@@ -969,44 +1006,17 @@ export default function Dashboard() {
           onNav={handleNav}
           unread={unread}
           user={user}
-          theme={theme}
-          onTheme={setTheme}
-          railHidden={railHidden}
-          onLogout={() => {
-            logout()
-            navigate('/login', { replace: true })
-          }}
+          open={navOpen}
+          onToggle={toggleNav}
+          onClose={closeNav}
         />
 
-        <main className="ff-main mt-5 min-w-0 lg:mt-0">
-          <div className="mb-4 hidden items-center gap-3 lg:flex">
-            <button
-              type="button"
-              onClick={() => setRailHidden((hidden) => !hidden)}
-              aria-expanded={!railHidden}
-              aria-controls="ff-dashboard-rail"
-              aria-label={railHidden ? 'Show navigation' : 'Hide navigation'}
-              title={railHidden ? 'Show navigation' : 'Hide navigation'}
-              className={cx(BTN, 'ff-btn hidden lg:inline-flex')}
-            >
-              <SidebarIcon className="h-3.5 w-3.5" />
-              <span className="hidden xl:inline">{railHidden ? 'Show nav' : 'Hide nav'}</span>
-            </button>
-          </div>
-          {railHidden && (
-            <div className="mb-5 hidden lg:block">
-              <Link
-                to="/"
-                className="inline-flex items-center gap-2.5"
-                aria-label="FocusFlow home"
-              >
-                <BrandMark />
-                <span className="font-grotesk text-[1.05rem] font-bold tracking-[-0.02em] text-ink">
-                  Focus<span className="text-amber">Flow</span>
-                </span>
-              </Link>
-            </div>
+        <main
+          className={cx(
+            'ff-main mt-5 min-w-0 lg:mt-0',
+            !navOpen && 'lg:pl-12',
           )}
+        >
           <div className="ff-top flex flex-wrap items-end justify-between gap-x-6 gap-y-4">
             <div className="min-w-0">
               <SectionLabel className="text-amber/85">{fmtLongDate(today)}</SectionLabel>
@@ -1113,6 +1123,18 @@ export default function Dashboard() {
               onMarkAll={markAllRead}
             />
           </div>
+
+          <Panel id="sec-settings" title="Settings" hint="Appearance" className="ff-grid">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0">
+                <SectionLabel>Dashboard theme</SectionLabel>
+                <p className="mt-1.5 max-w-md text-[0.8rem] leading-relaxed text-dim">
+                  Choose the palette used across your dashboard. Your choice is saved on this device.
+                </p>
+              </div>
+              <ThemeSwitcher theme={theme} onChange={setTheme} className="w-full sm:w-[290px]" />
+            </div>
+          </Panel>
 
           <footer className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-line/60 pt-4 font-mono text-[0.58rem] tracking-[0.1em] text-dim uppercase">
             <span>FocusFlow · Preview build</span>
