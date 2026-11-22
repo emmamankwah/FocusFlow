@@ -498,6 +498,7 @@ function DashboardRail({ active, onNav, unread, user }) {
       }
     }
     const onPointerDown = (event) => {
+      if (window.matchMedia?.('(min-width: 64rem)').matches) return
       if (
         !menuRef.current?.contains(event.target) &&
         !menuButtonRef.current?.contains(event.target)
@@ -525,13 +526,13 @@ function DashboardRail({ active, onNav, unread, user }) {
           type="button"
           aria-label="Close navigation menu"
           onClick={() => setMenuOpen(false)}
-          className="fixed inset-0 z-20 h-full w-full cursor-default bg-inkwell/35 backdrop-blur-sm"
+          className="fixed inset-0 z-20 h-full w-full cursor-default bg-inkwell/35 backdrop-blur-sm lg:hidden"
         />
       )}
 
       <aside
         id="ff-dashboard-rail"
-        className={cx('ff-rail relative', menuOpen && 'z-30')}
+        className={cx('ff-rail relative lg:sticky lg:top-8', menuOpen && 'z-30 lg:z-auto')}
       >
         <div className="flex flex-col gap-3 lg:gap-5">
           <div className="flex items-center justify-between gap-3 lg:flex-col lg:items-start">
@@ -562,7 +563,7 @@ function DashboardRail({ active, onNav, unread, user }) {
             id="ff-dashboard-menu"
             ref={menuRef}
             className={cx(
-              'ffd-menu absolute top-full left-0 z-30 mt-2 max-h-[calc(100dvh-6rem)] w-[min(280px,calc(100vw-2rem))] overflow-y-auto rounded-2xl border border-line/80 bg-surface p-2 shadow-[0_24px_60px_-30px_rgba(16,27,59,0.35)]',
+              'ffd-menu absolute top-full left-0 z-30 mt-2 max-h-[calc(100dvh-6rem)] w-[min(280px,calc(100vw-2rem))] overflow-y-auto rounded-2xl border border-line/80 bg-surface p-2 shadow-[0_24px_60px_-30px_rgba(16,27,59,0.35)] lg:static lg:z-auto lg:mt-0 lg:max-h-none lg:w-full lg:overflow-visible lg:rounded-none lg:border-0 lg:bg-transparent lg:p-0 lg:shadow-none',
               menuOpen ? 'block' : 'hidden',
             )}
           >
