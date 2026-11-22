@@ -63,6 +63,14 @@ if ($Reload) {
     $uvicornArgs += "--reload"
 }
 
-python @uvicornArgs
+$python = Join-Path $PSScriptRoot "venv\Scripts\python.exe"
+if (-not (Test-Path $python)) {
+    $pythonCommand = Get-Command python -ErrorAction SilentlyContinue
+    if (-not $pythonCommand) {
+        throw "Python was not found. Create the Backend virtual environment and install requirements.txt."
+    }
+    $python = $pythonCommand.Source
+}
+
+& $python @uvicornArgs
 exit $LASTEXITCODE
-$
