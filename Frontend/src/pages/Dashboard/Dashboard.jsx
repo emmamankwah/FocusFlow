@@ -34,7 +34,6 @@ import {
   CheckIcon,
   ClipboardIcon,
   GearIcon,
-  GridIcon,
   HeartIcon,
   InboxIcon,
   LogoutButton,
@@ -68,7 +67,6 @@ function prefersReducedMotion() {
 }
 
 const navIcons = {
-  grid: GridIcon,
   inbox: InboxIcon,
   calendar: CalendarIcon,
   spark: SparkIcon,

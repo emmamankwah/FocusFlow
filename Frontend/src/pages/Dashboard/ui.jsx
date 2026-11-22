@@ -27,11 +27,12 @@ export function LogoutButton({ className = '', onNavigate }) {
         navigate('/login', { replace: true })
       }}
       className={cx(
-        'flex min-h-9 w-full items-center rounded-lg border border-transparent px-3 py-2 text-left font-mono text-[0.63rem] tracking-[0.13em] text-dim uppercase transition hover:border-coral/30 hover:bg-coral/5 hover:text-coral focus-visible:ring-2 focus-visible:ring-coral/40 focus-visible:outline-none',
+        'group flex min-h-9 w-full items-center gap-2.5 rounded-lg border border-transparent px-2.5 py-2 text-left font-mono text-[0.63rem] tracking-[0.13em] text-dim uppercase transition duration-150 hover:border-coral/25 hover:bg-coral/5 hover:text-coral focus-visible:ring-2 focus-visible:ring-coral/40 focus-visible:outline-none',
         className,
       )}
     >
-      Log out
+      <LogoutIcon className="h-3.5 w-3.5 shrink-0 text-dim/70 transition-colors group-hover:text-coral" />
+      <span className="min-w-0 flex-1 truncate">Log out</span>
     </button>
   )
 }
@@ -370,26 +371,6 @@ export function SendIcon({ className = '' }) {
   )
 }
 
-export function GridIcon({ className = '' }) {
-  return (
-    <svg
-      viewBox="0 0 16 16"
-      aria-hidden="true"
-      className={className}
-      fill="none"
-      stroke="currentColor"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth="1.6"
-    >
-      <rect x="2.4" y="2.4" width="4.7" height="4.7" rx="1.1" />
-      <rect x="8.9" y="2.4" width="4.7" height="4.7" rx="1.1" />
-      <rect x="2.4" y="8.9" width="4.7" height="4.7" rx="1.1" />
-      <rect x="8.9" y="8.9" width="4.7" height="4.7" rx="1.1" />
-    </svg>
-  )
-}
-
 export function HeartIcon({ className = '' }) {
   return (
     <svg
@@ -439,6 +420,24 @@ export function GearIcon({ className = '' }) {
     >
       <path d="M6 2.4h4l.5 1.4 1.2.5 1.3-.7 1.5 2.2-.8 1.1v1.6l.8 1.1-1.5 2.2-1.3-.7-1.2.5-.5 1.4H6l-.5-1.4-1.2-.5-1.3.7L1.5 8.5l.8-1.1V5.8l-.8-1.1L3 2.5l1.3.7 1.2-.5.5-1.3Z" />
       <circle cx="8" cy="7.7" r="1.9" />
+    </svg>
+  )
+}
+
+export function LogoutIcon({ className = '' }) {
+  return (
+    <svg
+      viewBox="0 0 16 16"
+      aria-hidden="true"
+      className={className}
+      fill="none"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="1.6"
+    >
+      <path d="M6.4 2.8H4.3a1.3 1.3 0 0 0-1.3 1.3v7.8a1.3 1.3 0 0 0 1.3 1.3h2.1" />
+      <path d="M9.4 5.2 12.2 8l-2.8 2.8M12 8H6.6" />
     </svg>
   )
 }

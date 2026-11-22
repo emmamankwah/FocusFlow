@@ -5,7 +5,6 @@ export const WEEKLY_GOAL_HOURS = 25
 export const navGroups = ['Plan', 'Insights', 'Account']
 
 export const sections = [
-  { id: 'sec-overview', label: 'Overview', icon: 'grid', group: 'Plan' },
   { id: 'sec-work', label: 'Work Inbox', icon: 'inbox', group: 'Plan' },
   { id: 'sec-focus', label: 'Today', icon: 'calendar', group: 'Plan' },
   { id: 'sec-ai', label: 'Suggestions', icon: 'spark', group: 'Insights' },
