@@ -78,7 +78,7 @@
 }
 
 .ffd-menu {
-  transform-origin: top right;
+  transform-origin: top left;
   animation: ffd-menu-in 160ms ease-out;
 }
 

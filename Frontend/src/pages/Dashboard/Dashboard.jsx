@@ -41,7 +41,6 @@ import {
   Panel,
   SectionLabel,
   SendIcon,
-  SidebarIcon,
   SparkIcon,
   ThemeSwitcher,
   cx,
@@ -410,7 +409,81 @@ function UserCard({ user }) {
   )
 }
 
-function DashboardRail({ active, onNav, unread, user, railHidden }) {
+function DashboardNavList({ active, onNav, onNavigate, unread }) {
+  return (
+    <nav
+      aria-label="Dashboard sections"
+      className="ff-nav ffd-nav-scroll flex w-full flex-col gap-3 lg:gap-4"
+    >
+      {navGroups.map((group) => (
+        <div key={group} className="flex flex-col gap-1">
+          <span className="px-2.5 font-mono text-[0.55rem] tracking-[0.18em] text-dim/70 uppercase">
+            {group}
+          </span>
+          {sections
+            .filter((section) => section.group === group)
+            .map((section) => {
+              const isActive = active === section.id
+              const Icon = navIcons[section.icon]
+              const className = cx(
+                'group flex min-h-9 w-full items-center gap-2.5 rounded-lg border px-2.5 py-2 text-left font-mono text-[0.63rem] tracking-[0.13em] uppercase transition duration-150',
+                isActive
+                  ? 'border-amber/25 bg-amber/10 text-amber'
+                  : 'border-transparent text-dim hover:border-line/70 hover:bg-deck/60 hover:text-ink',
+              )
+              const unreadBadge = section.id === 'sec-notes' && unread > 0 && (
+                <span
+                  className="rounded-full bg-amber px-1.5 py-0.5 font-mono text-[0.56rem] font-semibold tracking-normal text-white"
+                  aria-label={`${unread} unread notifications`}
+                >
+                  {unread}
+                </span>
+              )
+              const icon = (
+                <Icon
+                  className={cx(
+                    'h-3.5 w-3.5 shrink-0 transition-colors',
+                    isActive ? 'text-amber' : 'text-dim/70 group-hover:text-ink',
+                  )}
+                />
+              )
+
+              if (section.to) {
+                return (
+                  <Link
+                    key={section.id}
+                    to={section.to}
+                    onClick={() => onNavigate?.()}
+                    className={className}
+                  >
+                    {icon}
+                    <span className="min-w-0 flex-1 truncate">{section.label}</span>
+                    {unreadBadge}
+                  </Link>
+                )
+              }
+
+              return (
+                <button
+                  key={section.id}
+                  type="button"
+                  onClick={() => onNav(section.id)}
+                  aria-current={isActive ? 'true' : undefined}
+                  className={className}
+                >
+                  {icon}
+                  <span className="min-w-0 flex-1 truncate">{section.label}</span>
+                  {unreadBadge}
+                </button>
+              )
+            })}
+        </div>
+      ))}
+    </nav>
+  )
+}
+
+function DashboardRail({ active, onNav, unread, user }) {
   const [menuOpen, setMenuOpen] = useState(false)
   const menuRef = useRef(null)
   const menuButtonRef = useRef(null)
@@ -432,18 +505,11 @@ function DashboardRail({ active, onNav, unread, user, railHidden }) {
         setMenuOpen(false)
       }
     }
-    const desktop = window.matchMedia?.('(min-width: 64rem)')
-    const closeOnDesktop = () => {
-      if (desktop?.matches) setMenuOpen(false)
-    }
-
     document.addEventListener('keydown', onKeyDown)
     document.addEventListener('pointerdown', onPointerDown)
-    desktop?.addEventListener('change', closeOnDesktop)
     return () => {
       document.removeEventListener('keydown', onKeyDown)
       document.removeEventListener('pointerdown', onPointerDown)
-      desktop?.removeEventListener('change', closeOnDesktop)
     }
   }, [menuOpen])
 
@@ -459,20 +525,16 @@ function DashboardRail({ active, onNav, unread, user, railHidden }) {
           type="button"
           aria-label="Close navigation menu"
           onClick={() => setMenuOpen(false)}
-          className="fixed inset-0 z-20 h-full w-full cursor-default bg-inkwell/35 backdrop-blur-sm lg:hidden"
+          className="fixed inset-0 z-20 h-full w-full cursor-default bg-inkwell/35 backdrop-blur-sm"
         />
       )}
 
       <aside
         id="ff-dashboard-rail"
-        className={cx(
-          'ff-rail relative lg:sticky lg:top-8',
-          menuOpen && 'z-30 lg:z-auto',
-          railHidden && 'lg:hidden',
-        )}
+        className={cx('ff-rail relative', menuOpen && 'z-30')}
       >
         <div className="flex flex-col gap-3 lg:gap-5">
-          <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center justify-between gap-3 lg:flex-col lg:items-start">
             <Link
               to="/"
               className="inline-flex min-w-0 items-center gap-2.5"
@@ -490,7 +552,7 @@ function DashboardRail({ active, onNav, unread, user, railHidden }) {
               aria-expanded={menuOpen}
               aria-controls="ff-dashboard-menu"
               aria-label={menuOpen ? 'Close dashboard menu' : 'Open dashboard menu'}
-              className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-line bg-surface text-ink transition duration-150 hover:border-dim focus-visible:ring-2 focus-visible:ring-amber/35 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas focus-visible:outline-none lg:hidden"
+              className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-line bg-surface text-ink transition duration-150 hover:border-dim focus-visible:ring-2 focus-visible:ring-amber/35 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas focus-visible:outline-none"
             >
               <MenuIcon open={menuOpen} className="h-4 w-4" />
             </button>
@@ -500,89 +562,21 @@ function DashboardRail({ active, onNav, unread, user, railHidden }) {
             id="ff-dashboard-menu"
             ref={menuRef}
             className={cx(
-              'ffd-menu absolute top-full right-0 z-30 mt-2 max-h-[calc(100dvh-6rem)] w-[min(280px,calc(100vw-2rem))] overflow-y-auto rounded-2xl border border-line/80 bg-surface p-2 shadow-[0_24px_60px_-30px_rgba(16,27,59,0.35)] lg:static lg:mt-0 lg:w-full lg:overflow-visible lg:rounded-none lg:border-0 lg:bg-transparent lg:p-0 lg:shadow-none lg:contents',
+              'ffd-menu absolute top-full left-0 z-30 mt-2 max-h-[calc(100dvh-6rem)] w-[min(280px,calc(100vw-2rem))] overflow-y-auto rounded-2xl border border-line/80 bg-surface p-2 shadow-[0_24px_60px_-30px_rgba(16,27,59,0.35)]',
               menuOpen ? 'block' : 'hidden',
             )}
           >
-            <nav
-              aria-label="Dashboard sections"
-              className="ff-nav ffd-nav-scroll flex w-full flex-col gap-3 lg:gap-4"
-            >
-              {navGroups.map((group) => (
-                <div key={group} className="flex flex-col gap-1">
-                  <span className="px-2.5 font-mono text-[0.55rem] tracking-[0.18em] text-dim/70 uppercase">
-                    {group}
-                  </span>
-                  {sections
-                    .filter((section) => section.group === group)
-                    .map((section) => {
-                      const isActive = active === section.id
-                      const Icon = navIcons[section.icon]
-                      const className = cx(
-                        'group flex min-h-9 w-full items-center gap-2.5 rounded-lg border px-2.5 py-2 text-left font-mono text-[0.63rem] tracking-[0.13em] uppercase transition duration-150',
-                        isActive
-                          ? 'border-amber/25 bg-amber/10 text-amber'
-                          : 'border-transparent text-dim hover:border-line/70 hover:bg-deck/60 hover:text-ink',
-                      )
-                      const unreadBadge = section.id === 'sec-notes' && unread > 0 && (
-                        <span
-                          className="rounded-full bg-amber px-1.5 py-0.5 font-mono text-[0.56rem] font-semibold tracking-normal text-white"
-                          aria-label={`${unread} unread notifications`}
-                        >
-                          {unread}
-                        </span>
-                      )
-                      const icon = (
-                        <Icon
-                          className={cx(
-                            'h-3.5 w-3.5 shrink-0 transition-colors',
-                            isActive ? 'text-amber' : 'text-dim/70 group-hover:text-ink',
-                          )}
-                        />
-                      )
+            <DashboardNavList
+              active={active}
+              onNav={handleNav}
+              onNavigate={() => setMenuOpen(false)}
+              unread={unread}
+            />
 
-                      if (section.to) {
-                        return (
-                          <Link
-                            key={section.id}
-                            to={section.to}
-                            onClick={() => setMenuOpen(false)}
-                            className={className}
-                          >
-                            {icon}
-                            <span className="min-w-0 flex-1 truncate">{section.label}</span>
-                            {unreadBadge}
-                          </Link>
-                        )
-                      }
-
-                      return (
-                        <button
-                          key={section.id}
-                          type="button"
-                          onClick={() => handleNav(section.id)}
-                          aria-current={isActive ? 'true' : undefined}
-                          className={className}
-                        >
-                          {icon}
-                          <span className="min-w-0 flex-1 truncate">{section.label}</span>
-                          {unreadBadge}
-                        </button>
-                      )
-                    })}
-                </div>
-              ))}
-            </nav>
-
-            <div className="mt-2 border-t border-line/60 px-1 pt-3 pb-1 lg:hidden">
+            <div className="mt-2 border-t border-line/60 px-1 pt-3 pb-1">
               <UserCard user={user} />
               <LogoutButton className="mt-2" onNavigate={() => setMenuOpen(false)} />
             </div>
-          </div>
-
-          <div className="hidden lg:block">
-            <UserCard user={user} />
-            <LogoutButton className="mt-2" />
           </div>
         </div>
       </aside>
@@ -601,13 +595,6 @@ export default function Dashboard() {
   const [toast, setToast] = useState('')
   const toastTimer = useRef(null)
   const navLockRef = useRef(0)
-  const [railHidden, setRailHidden] = useState(() => {
-    try {
-      return localStorage.getItem('focusflow-rail-hidden') === '1'
-    } catch {
-      return false
-    }
-  })
 
   const [addOpen, setAddOpen] = useState(false)
   const [form, setForm] = useState({ title: '', time: '16:00', duration: '45', type: 'focus' })
@@ -666,14 +653,6 @@ export default function Dashboard() {
   useEffect(() => {
     saveBoard(board, today)
   }, [board, today])
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('focusflow-rail-hidden', railHidden ? '1' : '0')
-    } catch {
-      // Preference only; ignore unavailable storage.
-    }
-  }, [railHidden])
 
   useEffect(() => () => clearTimeout(toastTimer.current), [])
 
@@ -1008,49 +987,15 @@ export default function Dashboard() {
         <div className="ffd-grid-bg absolute inset-0" />
       </div>
 
-      <div
-        className={cx(
-          'relative mx-auto w-full max-w-[1320px] px-4 py-6 sm:px-6 lg:grid lg:items-start lg:gap-8 lg:px-8 lg:py-8',
-          railHidden ? 'lg:grid-cols-1' : 'lg:grid-cols-[200px_minmax(0,1fr)]',
-        )}
-      >
+      <div className="relative mx-auto w-full max-w-[1320px] px-4 py-6 sm:px-6 lg:grid lg:grid-cols-[200px_minmax(0,1fr)] lg:items-start lg:gap-8 lg:px-8 lg:py-8">
         <DashboardRail
           active={active}
           onNav={handleNav}
           unread={unread}
           user={user}
-          railHidden={railHidden}
         />
 
         <main className="ff-main mt-5 min-w-0 lg:mt-0">
-          <div className="mb-4 hidden items-center gap-3 lg:flex">
-            <button
-              type="button"
-              onClick={() => setRailHidden((hidden) => !hidden)}
-              aria-expanded={!railHidden}
-              aria-controls="ff-dashboard-rail"
-              aria-label={railHidden ? 'Show navigation' : 'Hide navigation'}
-              title={railHidden ? 'Show navigation' : 'Hide navigation'}
-              className={cx(BTN, 'ff-btn hidden lg:inline-flex')}
-            >
-              <SidebarIcon className="h-3.5 w-3.5" />
-              <span className="hidden xl:inline">{railHidden ? 'Show nav' : 'Hide nav'}</span>
-            </button>
-          </div>
-          {railHidden && (
-            <div className="mb-5 hidden lg:block">
-              <Link
-                to="/"
-                className="inline-flex items-center gap-2.5"
-                aria-label="FocusFlow home"
-              >
-                <BrandMark />
-                <span className="font-grotesk text-[1.05rem] font-bold tracking-[-0.02em] text-ink">
-                  Focus<span className="text-amber">Flow</span>
-                </span>
-              </Link>
-            </div>
-          )}
           <div className="ff-top flex flex-wrap items-end justify-between gap-x-6 gap-y-4">
             <div className="min-w-0">
               <SectionLabel className="text-amber/85">{fmtLongDate(today)}</SectionLabel>
