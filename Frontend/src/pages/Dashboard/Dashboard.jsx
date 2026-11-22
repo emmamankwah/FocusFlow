@@ -398,7 +398,12 @@ function UserCard({ user }) {
           {userFullName(user)}
         </span>
         <span className="block font-mono text-[0.54rem] tracking-[0.14em] text-dim uppercase">
-          {user?.persona || 'Student'}
+          {{
+            student: 'Student',
+            working_professional: 'Working professional',
+            both: 'Student and professional',
+            other: 'Other',
+          }[user?.user_type] || 'User'}
         </span>
       </span>
     </div>

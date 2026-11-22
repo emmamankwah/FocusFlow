@@ -34,6 +34,7 @@ export async function signup(values) {
     email: normalizeEmail(values.email),
     password: values.password,
     confirmPassword: values.confirmPassword,
+    user_type: values.user_type,
   })
   sessionStorage.setItem(PENDING_EMAIL_KEY, normalizeEmail(values.email))
   return result
