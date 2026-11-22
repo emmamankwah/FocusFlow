@@ -15,6 +15,7 @@ import {
   loadBoard,
   makeNotes,
   makeSuggestions,
+  navGroups,
   riskStyles,
   saveBoard,
   sections,
@@ -23,15 +24,24 @@ import {
   userInitials,
 } from './data.js'
 import {
+  BellIcon,
   BrandMark,
   BTN,
   BTN_PRIMARY,
   BTN_QUIET,
+  CalendarIcon,
+  ChartIcon,
   CheckIcon,
+  ClipboardIcon,
+  GearIcon,
+  GridIcon,
+  HeartIcon,
+  InboxIcon,
   LogoutButton,
   MenuIcon,
   Panel,
   SectionLabel,
+  SendIcon,
   SidebarIcon,
   SparkIcon,
   ThemeSwitcher,
@@ -55,6 +65,19 @@ const initialChat = (name) => [
 
 function prefersReducedMotion() {
   return window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
+}
+
+const navIcons = {
+  grid: GridIcon,
+  inbox: InboxIcon,
+  calendar: CalendarIcon,
+  spark: SparkIcon,
+  clipboard: ClipboardIcon,
+  heart: HeartIcon,
+  chart: ChartIcon,
+  send: SendIcon,
+  bell: BellIcon,
+  gear: GearIcon,
 }
 
 function StatCell({ label, value, unit, note, meter, valueClass = '' }) {
@@ -480,52 +503,72 @@ function DashboardRail({ active, onNav, unread, user, railHidden }) {
           >
             <nav
               aria-label="Dashboard sections"
-              className="ff-nav ffd-nav-scroll grid w-full gap-1 lg:flex lg:flex-col"
+              className="ff-nav ffd-nav-scroll flex w-full flex-col gap-3 lg:gap-4"
             >
-              {sections.map((section) => {
-                const isActive = active === section.id
-                const className = cx(
-                  'flex min-h-9 shrink-0 items-center justify-between gap-2 rounded-lg border-l-2 px-3 py-2 text-left font-mono text-[0.63rem] tracking-[0.13em] uppercase transition lg:w-full',
-                  isActive
-                    ? 'border-amber bg-amber/10 text-amber'
-                    : 'border-transparent text-dim hover:bg-deck/60 hover:text-ink',
-                )
-                const unreadBadge = section.id === 'sec-notes' && unread > 0 && (
-                  <span
-                    className="rounded-full bg-amber px-1.5 py-0.5 font-mono text-[0.56rem] font-semibold tracking-normal text-white"
-                    aria-label={`${unread} unread notifications`}
-                  >
-                    {unread}
+              {navGroups.map((group) => (
+                <div key={group} className="flex flex-col gap-1">
+                  <span className="px-2.5 font-mono text-[0.55rem] tracking-[0.18em] text-dim/70 uppercase">
+                    {group}
                   </span>
-                )
+                  {sections
+                    .filter((section) => section.group === group)
+                    .map((section) => {
+                      const isActive = active === section.id
+                      const Icon = navIcons[section.icon]
+                      const className = cx(
+                        'group flex min-h-9 w-full items-center gap-2.5 rounded-lg border px-2.5 py-2 text-left font-mono text-[0.63rem] tracking-[0.13em] uppercase transition duration-150',
+                        isActive
+                          ? 'border-amber/25 bg-amber/10 text-amber'
+                          : 'border-transparent text-dim hover:border-line/70 hover:bg-deck/60 hover:text-ink',
+                      )
+                      const unreadBadge = section.id === 'sec-notes' && unread > 0 && (
+                        <span
+                          className="rounded-full bg-amber px-1.5 py-0.5 font-mono text-[0.56rem] font-semibold tracking-normal text-white"
+                          aria-label={`${unread} unread notifications`}
+                        >
+                          {unread}
+                        </span>
+                      )
+                      const icon = (
+                        <Icon
+                          className={cx(
+                            'h-3.5 w-3.5 shrink-0 transition-colors',
+                            isActive ? 'text-amber' : 'text-dim/70 group-hover:text-ink',
+                          )}
+                        />
+                      )
 
-                if (section.to) {
-                  return (
-                    <Link
-                      key={section.id}
-                      to={section.to}
-                      onClick={() => setMenuOpen(false)}
-                      className={className}
-                    >
-                      <span>{section.label}</span>
-                      {unreadBadge}
-                    </Link>
-                  )
-                }
+                      if (section.to) {
+                        return (
+                          <Link
+                            key={section.id}
+                            to={section.to}
+                            onClick={() => setMenuOpen(false)}
+                            className={className}
+                          >
+                            {icon}
+                            <span className="min-w-0 flex-1 truncate">{section.label}</span>
+                            {unreadBadge}
+                          </Link>
+                        )
+                      }
 
-                return (
-                  <button
-                    key={section.id}
-                    type="button"
-                    onClick={() => handleNav(section.id)}
-                    aria-current={isActive ? 'true' : undefined}
-                    className={className}
-                  >
-                    <span>{section.label}</span>
-                    {unreadBadge}
-                  </button>
-                )
-              })}
+                      return (
+                        <button
+                          key={section.id}
+                          type="button"
+                          onClick={() => handleNav(section.id)}
+                          aria-current={isActive ? 'true' : undefined}
+                          className={className}
+                        >
+                          {icon}
+                          <span className="min-w-0 flex-1 truncate">{section.label}</span>
+                          {unreadBadge}
+                        </button>
+                      )
+                    })}
+                </div>
+              ))}
             </nav>
 
             <div className="mt-2 border-t border-line/60 px-1 pt-3 pb-1 lg:hidden">

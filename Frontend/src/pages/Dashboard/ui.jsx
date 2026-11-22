@@ -369,3 +369,76 @@ export function SendIcon({ className = '' }) {
     </svg>
   )
 }
+
+export function GridIcon({ className = '' }) {
+  return (
+    <svg
+      viewBox="0 0 16 16"
+      aria-hidden="true"
+      className={className}
+      fill="none"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="1.6"
+    >
+      <rect x="2.4" y="2.4" width="4.7" height="4.7" rx="1.1" />
+      <rect x="8.9" y="2.4" width="4.7" height="4.7" rx="1.1" />
+      <rect x="2.4" y="8.9" width="4.7" height="4.7" rx="1.1" />
+      <rect x="8.9" y="8.9" width="4.7" height="4.7" rx="1.1" />
+    </svg>
+  )
+}
+
+export function HeartIcon({ className = '' }) {
+  return (
+    <svg
+      viewBox="0 0 16 16"
+      aria-hidden="true"
+      className={className}
+      fill="none"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="1.6"
+    >
+      <path d="M8 13.2 3.6 8.9a2.7 2.7 0 0 1 3.8-3.8L8 5.7l.6-.6a2.7 2.7 0 0 1 3.8 3.8L8 13.2Z" />
+    </svg>
+  )
+}
+
+export function BellIcon({ className = '' }) {
+  return (
+    <svg
+      viewBox="0 0 16 16"
+      aria-hidden="true"
+      className={className}
+      fill="none"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="1.6"
+    >
+      <path d="M5.2 10.6V7a2.8 2.8 0 0 1 5.6 0v3.6l1 1.4H4.2l1-1.4Z" />
+      <path d="M6.7 13.5a1.4 1.4 0 0 0 2.6 0M8 2.4V1.7" />
+    </svg>
+  )
+}
+
+export function GearIcon({ className = '' }) {
+  return (
+    <svg
+      viewBox="0 0 16 16"
+      aria-hidden="true"
+      className={className}
+      fill="none"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="1.6"
+    >
+      <path d="M6 2.4h4l.5 1.4 1.2.5 1.3-.7 1.5 2.2-.8 1.1v1.6l.8 1.1-1.5 2.2-1.3-.7-1.2.5-.5 1.4H6l-.5-1.4-1.2-.5-1.3.7L1.5 8.5l.8-1.1V5.8l-.8-1.1L3 2.5l1.3.7 1.2-.5.5-1.3Z" />
+      <circle cx="8" cy="7.7" r="1.9" />
+    </svg>
+  )
+}
