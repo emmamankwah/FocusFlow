@@ -27,11 +27,11 @@ export function LogoutButton({ className = '', onNavigate }) {
         navigate('/login', { replace: true })
       }}
       className={cx(
-        'group flex min-h-9 w-full items-center gap-2.5 rounded-lg border border-transparent px-2.5 py-2 text-left font-mono text-[0.63rem] tracking-[0.13em] text-dim uppercase transition duration-150 hover:border-coral/25 hover:bg-coral/5 hover:text-coral focus-visible:ring-2 focus-visible:ring-coral/40 focus-visible:outline-none',
+        'group flex min-h-9 w-full items-center gap-2.5 rounded-lg border border-transparent px-2.5 py-2 text-left font-mono text-[0.63rem] tracking-[0.13em] text-dim uppercase transition duration-150 hover:border-[#b91c1c]/40 hover:bg-[#b91c1c]/10 hover:text-[#b91c1c] focus-visible:ring-2 focus-visible:ring-[#b91c1c]/40 focus-visible:outline-none',
         className,
       )}
     >
-      <LogoutIcon className="h-3.5 w-3.5 shrink-0 text-dim/70 transition-colors group-hover:text-coral" />
+      <LogoutIcon className="h-3.5 w-3.5 shrink-0 text-dim/70 transition-colors group-hover:text-[#b91c1c]" />
       <span className="min-w-0 flex-1 truncate">Log out</span>
     </button>
   )
