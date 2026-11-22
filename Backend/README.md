@@ -33,15 +33,27 @@ network access; later runs reuse the cached model.
 
 ## Run
 
-For local development on Windows, install and start Docker Desktop, then start
-the API and its Redis rate-limit service together from this directory:
+### Local production-style run
+
+Keep using your installed PostgreSQL service. Make sure `.env` has the local
+PostgreSQL settings and a private `JWT_SECRET` (see `.env.example` for the
+variable names), then start Docker Desktop. From this directory, run:
+
+```powershell
+./start-local-prod.ps1
+```
+
+This starts only Redis in Docker, checks that PostgreSQL is listening on port
+5432, and runs Uvicorn on `127.0.0.1:8000` without development reload mode.
+The backend reads PostgreSQL and Redis connection settings from `.env`. Redis
+stays running if the API process stops; stop it with `./stop-dev.ps1`.
+
+### Development run
+
+For development with automatic reload, use:
 
 ```powershell
 ./start-dev.ps1
 ```
 
-The script starts Redis from `compose.redis.yml` and then runs the API. Redis
-stays running if the API process stops; stop it with `./stop-dev.ps1`. The
-default backend URL (`redis://localhost:6379/0`) connects to this local Redis
-container. You can still run the API directly with `python -m uvicorn
-main:app --reload` when Redis is already running.
+This also starts Redis from `compose.redis.yml` before running the API.
