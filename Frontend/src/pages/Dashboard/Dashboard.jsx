@@ -483,17 +483,16 @@ function DashboardNavList({ active, onNav, onNavigate, unread }) {
   )
 }
 
-function DashboardRail({ active, onNav, unread, user }) {
-  const [menuOpen, setMenuOpen] = useState(false)
+function DashboardRail({ active, onNav, unread, user, open, onToggle, onClose }) {
   const menuRef = useRef(null)
   const menuButtonRef = useRef(null)
 
   useEffect(() => {
-    if (!menuOpen) return undefined
+    if (!open) return undefined
 
     const onKeyDown = (event) => {
       if (event.key === 'Escape') {
-        setMenuOpen(false)
+        onClose()
         menuButtonRef.current?.focus()
       }
     }
@@ -503,7 +502,7 @@ function DashboardRail({ active, onNav, unread, user }) {
         !menuRef.current?.contains(event.target) &&
         !menuButtonRef.current?.contains(event.target)
       ) {
-        setMenuOpen(false)
+        onClose()
       }
     }
     document.addEventListener('keydown', onKeyDown)
@@ -512,33 +511,38 @@ function DashboardRail({ active, onNav, unread, user }) {
       document.removeEventListener('keydown', onKeyDown)
       document.removeEventListener('pointerdown', onPointerDown)
     }
-  }, [menuOpen])
+  }, [open, onClose])
 
   function handleNav(id) {
-    setMenuOpen(false)
+    onClose()
     requestAnimationFrame(() => onNav(id))
   }
 
   return (
     <>
-      {menuOpen && (
+      {open && (
         <button
           type="button"
           aria-label="Close navigation menu"
-          onClick={() => setMenuOpen(false)}
+          onClick={onClose}
           className="fixed inset-0 z-20 h-full w-full cursor-default bg-inkwell/35 backdrop-blur-sm lg:hidden"
         />
       )}
 
       <aside
         id="ff-dashboard-rail"
-        className={cx('ff-rail relative lg:sticky lg:top-8', menuOpen && 'z-30 lg:z-auto')}
+        className={cx(
+          'ff-rail relative',
+          open
+            ? 'z-30 lg:sticky lg:top-8 lg:z-auto'
+            : 'lg:absolute lg:top-8 lg:left-8 lg:z-30',
+        )}
       >
         <div className="flex flex-col gap-3 lg:gap-5">
           <div className="flex items-center justify-between gap-3 lg:flex-col lg:items-start">
             <Link
               to="/"
-              className="inline-flex min-w-0 items-center gap-2.5"
+              className={cx('inline-flex min-w-0 items-center gap-2.5', !open && 'lg:hidden')}
               aria-label="FocusFlow home"
             >
               <BrandMark />
@@ -549,13 +553,13 @@ function DashboardRail({ active, onNav, unread, user }) {
             <button
               ref={menuButtonRef}
               type="button"
-              onClick={() => setMenuOpen((open) => !open)}
-              aria-expanded={menuOpen}
+              onClick={onToggle}
+              aria-expanded={open}
               aria-controls="ff-dashboard-menu"
-              aria-label={menuOpen ? 'Close dashboard menu' : 'Open dashboard menu'}
+              aria-label={open ? 'Close dashboard menu' : 'Open dashboard menu'}
               className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-line bg-surface text-ink transition duration-150 hover:border-dim focus-visible:ring-2 focus-visible:ring-amber/35 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas focus-visible:outline-none"
             >
-              <MenuIcon open={menuOpen} className="h-4 w-4" />
+              <MenuIcon open={open} className="h-4 w-4" />
             </button>
           </div>
 
@@ -564,19 +568,19 @@ function DashboardRail({ active, onNav, unread, user }) {
             ref={menuRef}
             className={cx(
               'ffd-menu absolute top-full left-0 z-30 mt-2 max-h-[calc(100dvh-6rem)] w-[min(280px,calc(100vw-2rem))] overflow-y-auto rounded-2xl border border-line/80 bg-surface p-2 shadow-[0_24px_60px_-30px_rgba(16,27,59,0.35)] lg:static lg:z-auto lg:mt-0 lg:max-h-none lg:w-full lg:overflow-visible lg:rounded-none lg:border-0 lg:bg-transparent lg:p-0 lg:shadow-none',
-              menuOpen ? 'block' : 'hidden',
+              open ? 'block' : 'hidden',
             )}
           >
             <DashboardNavList
               active={active}
               onNav={handleNav}
-              onNavigate={() => setMenuOpen(false)}
+              onNavigate={onClose}
               unread={unread}
             />
 
             <div className="mt-2 border-t border-line/60 px-1 pt-3 pb-1">
               <UserCard user={user} />
-              <LogoutButton className="mt-2" onNavigate={() => setMenuOpen(false)} />
+              <LogoutButton className="mt-2" onNavigate={onClose} />
             </div>
           </div>
         </div>
@@ -593,9 +597,12 @@ export default function Dashboard() {
   const [theme, setTheme] = useTheme()
   const [board, setBoard] = useState(() => loadBoard(today))
   const [active, setActive] = useState('sec-focus')
+  const [navOpen, setNavOpen] = useState(false)
   const [toast, setToast] = useState('')
   const toastTimer = useRef(null)
   const navLockRef = useRef(0)
+  const closeNav = useCallback(() => setNavOpen(false), [])
+  const toggleNav = useCallback(() => setNavOpen((open) => !open), [])
 
   const [addOpen, setAddOpen] = useState(false)
   const [form, setForm] = useState({ title: '', time: '16:00', duration: '45', type: 'focus' })
@@ -988,15 +995,28 @@ export default function Dashboard() {
         <div className="ffd-grid-bg absolute inset-0" />
       </div>
 
-      <div className="relative mx-auto w-full max-w-[1320px] px-4 py-6 sm:px-6 lg:grid lg:grid-cols-[200px_minmax(0,1fr)] lg:items-start lg:gap-8 lg:px-8 lg:py-8">
+      <div
+        className={cx(
+          'relative mx-auto w-full max-w-[1320px] px-4 py-6 sm:px-6 lg:grid lg:items-start lg:gap-8 lg:px-8 lg:py-8',
+          navOpen ? 'lg:grid-cols-[200px_minmax(0,1fr)]' : 'lg:grid-cols-[minmax(0,1fr)]',
+        )}
+      >
         <DashboardRail
           active={active}
           onNav={handleNav}
           unread={unread}
           user={user}
+          open={navOpen}
+          onToggle={toggleNav}
+          onClose={closeNav}
         />
 
-        <main className="ff-main mt-5 min-w-0 lg:mt-0">
+        <main
+          className={cx(
+            'ff-main mt-5 min-w-0 lg:mt-0',
+            !navOpen && 'lg:pl-12',
+          )}
+        >
           <div className="ff-top flex flex-wrap items-end justify-between gap-x-6 gap-y-4">
             <div className="min-w-0">
               <SectionLabel className="text-amber/85">{fmtLongDate(today)}</SectionLabel>
