@@ -12,27 +12,30 @@ import Faq from './Faq.jsx'
 import Cta from './Cta.jsx'
 import Footer from './Footer.jsx'
 import usePageTitle from '@/lib/usePageTitle'
+import Sidebar from '../../components/Sidebar.jsx'
 
 export default function Landing() {
   usePageTitle('FocusFlow AI - Your semester, already planned')
-
   return (
-    <div className="ff-product min-h-screen bg-canvas font-grotesk text-ink">
-      <Navbar />
-      <main>
-        <Hero />
-        <Marquee />
-        <FromDeadline />
-        <WeekPreview />
-        <Signals />
-        <Features />
-        <Repeatability />
-        <Audience />
-        <Principles />
-        <Faq />
-      </main>
-      <Cta />
-      <Footer />
+    <div className="flex ff-product min-h-screen bg-canvas font-grotesk text-ink">
+      <Sidebar />
+      <div className="flex-1 flex flex-col">
+        <Navbar />
+        <main className="flex-1">
+          <Hero />
+          <Marquee />
+          <FromDeadline />
+          <WeekPreview />
+          <Signals />
+          <Features />
+          <Repeatability />
+          <Audience />
+          <Principles />
+          <Faq />
+        </main>
+        <Cta />
+        <Footer />
+      </div>
     </div>
   )
 }
