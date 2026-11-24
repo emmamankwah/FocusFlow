@@ -60,6 +60,15 @@ The same automatic Redis startup applies if you launch the backend directly
 with `python main.py` or `python -m uvicorn main:app` from the `Backend`
 directory. Docker Desktop’s engine must be running first.
 
+The start scripts bind Uvicorn to a Windows job object and pass the session
+PID to the backend, so children that escape the job also exit. Pressing Ctrl+C,
+closing the terminal, or the script exiting or being killed terminates the
+whole process tree and releases port 8000; no separate cleanup is needed after
+a normal shutdown. If an older session left a stale
+listener behind, run `./clean-port8000.ps1` to stop the server process and any
+orphaned workers and free port 8000 (`./clean-port8000.ps1 -WhatIf` previews
+the targets). Redis keeps running independently; stop it with `./stop-dev.ps1`.
+
 ### Development run
 
 For development with automatic reload, use:
@@ -69,4 +78,6 @@ For development with automatic reload, use:
 ```
 
 This uses the same setup and starts Docker Desktop from the terminal if needed,
-but runs Uvicorn with automatic reload.
+but runs Uvicorn with automatic reload. The reload subprocess belongs to the
+same job object, so it is stopped together with the server when the session
+ends.

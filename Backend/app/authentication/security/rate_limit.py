@@ -10,6 +10,8 @@ from typing import Iterable
 import redis
 from redis.exceptions import RedisError
 
+_rate_limiters: list["RedisSlidingWindowLimiter"] = []
+
 
 class RateLimitUnavailable(RuntimeError):
     """Raised when Redis cannot enforce an authentication rate limit."""
@@ -83,6 +85,7 @@ class RedisSlidingWindowLimiter:
             health_check_interval=30,
             decode_responses=True,
         )
+        _rate_limiters.append(self)
 
     def retry_after(self, key: str) -> float:
         """Return seconds until the key may act again; zero means allowed."""
@@ -106,3 +109,11 @@ class RedisSlidingWindowLimiter:
                 "Authentication rate limiting is unavailable."
             ) from exc
         return float(retry_ms) / 1000
+
+    def close(self) -> None:
+        self.client.close()
+
+
+def close_rate_limiters() -> None:
+    for limiter in _rate_limiters:
+        limiter.close()
