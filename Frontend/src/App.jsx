@@ -12,6 +12,7 @@ const VerifyEmail = lazy(() => import('./pages/Auth/VerifyEmail.jsx'))
 const ForgotPassword = lazy(() => import('./pages/Auth/ForgotPassword.jsx'))
 const ResetPassword = lazy(() => import('./pages/Auth/ResetPassword.jsx'))
 const Dashboard = lazy(() => import('./pages/Dashboard/Dashboard.jsx'))
+const AdminDashboard = lazy(() => import('./pages/Admin/AdminDashboard.jsx'))
 const AiPlanner = lazy(() => import('./pages/Dashboard/AiPlanner.jsx'))
 const NotFound = lazy(() => import('./pages/NotFound.jsx'))
 
@@ -88,6 +89,7 @@ export default function App() {
           }
         />
 
+        <Route path="/admin" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </Suspense>

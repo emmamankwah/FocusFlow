@@ -1,6 +1,8 @@
 import logging
 import os
 import subprocess
+import threading
+import time
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -15,11 +17,34 @@ from app.ai.rag import embeddings as rag_embeddings
 from app.ai.rag.routes.rag import router as rag_router
 from app.authentication.routes.auth.auth_user import router as auth_router
 from app.ai.planner.router import router as planner_router
-from app.authentication.security.rate_limit import RateLimitUnavailable
+from app.authentication.security.rate_limit import (
+    RateLimitUnavailable,
+    close_rate_limiters,
+)
 
 load_dotenv(Path(__file__).resolve().parent / ".env")
 
 logger = logging.getLogger(__name__)
+
+
+def _watch_session(launcher_pid: int) -> None:
+    while True:
+        time.sleep(0.5)
+        try:
+            os.kill(launcher_pid, 0)
+        except OSError:
+            logger.warning("Session process %s exited; shutting down.", launcher_pid)
+            os._exit(0)
+
+
+_launcher_pid = os.getenv("FOCUSFLOW_LAUNCHER_PID")
+if _launcher_pid and _launcher_pid.isdigit():
+    threading.Thread(
+        target=_watch_session,
+        args=(int(_launcher_pid),),
+        name="focusflow-session-watch",
+        daemon=True,
+    ).start()
 
 
 def _start_local_redis() -> None:
@@ -56,7 +81,11 @@ async def lifespan(_app: FastAPI):
             rag_embeddings.warmup()
         except Exception:
             logger.exception("RAG embedding warm-up failed")
-    yield
+    try:
+        yield
+    finally:
+        logger.info("FocusFlow API is shutting down")
+        close_rate_limiters()
 
 APP_NAME = os.getenv("APP_NAME", "FocusFlow")
 CORS_ORIGINS = [
