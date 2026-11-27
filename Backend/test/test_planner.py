@@ -1,6 +1,10 @@
 import json
+import sys
+from pathlib import Path
 from fastapi.testclient import TestClient
-from Backend.main import app
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from main import app
 
 
 def test_generate_plan():

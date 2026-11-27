@@ -53,12 +53,12 @@ def _looks_like_repeated_header_or_footer(line: str) -> bool:
     """Avoid dropping repeated prose; only infer likely header-like lines."""
     stripped = line.strip()
     words = stripped.split()
-    multword_uppercase = (
-        len(words) >= 2
-        and any(character.isalpha() for character in stripped)
-        and stripped == stripped.upper()
-    )
-    return multword_uppercase or bool(_URL_OR_DOMAIN.match(stripped))
+    if not words or not any(c.isalpha() for c in stripped):
+        return False
+    alpha_words = [w for w in words if w[0].isalpha()]
+    all_caps   = len(alpha_words) >= 2 and stripped == stripped.upper()
+    title_case = len(alpha_words) >= 2 and all(w[0].isupper() for w in alpha_words)
+    return all_caps or title_case or bool(_URL_OR_DOMAIN.match(stripped))
 
 
 def repeated_lines(

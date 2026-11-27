@@ -49,9 +49,12 @@ def get_llm_messages(
 
 
 def get_client() -> OpenAI:
+    base_url = os.environ.get("OPENAI_BASE_URL")
+    if base_url and "openrouter.ai" in base_url and not base_url.endswith("/v1"):
+        base_url = f"{base_url.rstrip('/')}/api/v1"
     return OpenAI(
         api_key=os.environ.get("OPENAI_API_KEY"),
-        base_url=os.environ.get("OPENAI_BASE_URL"),
+        base_url=base_url,
         timeout=60.0,
     )
 
@@ -64,4 +67,8 @@ def get_reply(messages, context: str | None = None, mode: str = "planner") -> st
         temperature=TEMPERATURES[mode],
         max_tokens=MAX_REPLY_TOKENS,
     )
-    return completion.choices[0].message.content
+    msg = completion.choices[0].message
+    content = msg.content
+    if not content and hasattr(msg, "reasoning") and msg.reasoning:
+        content = msg.reasoning
+    return content or ""
