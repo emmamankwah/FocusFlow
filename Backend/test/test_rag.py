@@ -194,20 +194,20 @@ class RetrieverTests(unittest.TestCase):
         ]
         keyword_rows = [
             {
-                "id": 10,
-                "document_id": 3,
-                "title": "Doc",
-                "chunk_index": 2,
-                "content": "shared passage",
-                "score": 0.6,
-            },
-            {
                 "id": 11,
                 "document_id": 3,
                 "title": "Doc",
                 "chunk_index": 4,
                 "content": "keyword passage",
                 "score": 0.5,
+            },
+            {
+                "id": 10,
+                "document_id": 3,
+                "title": "Doc",
+                "chunk_index": 2,
+                "content": "shared passage",
+                "score": 0.6,
             },
         ]
 
