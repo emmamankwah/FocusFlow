@@ -173,15 +173,42 @@ class PipelineTests(unittest.TestCase):
 
 
 class RetrieverTests(unittest.TestCase):
-    def test_maps_rows(self):
-        rows = [
+    def test_merges_vector_and_keyword_results_and_deduplicates_chunks(self):
+        vector_rows = [
             {
+                "id": 10,
                 "document_id": 3,
                 "title": "Doc",
                 "chunk_index": 2,
-                "content": "passage",
+                "content": "shared passage",
                 "score": 0.87,
-            }
+            },
+            {
+                "id": 12,
+                "document_id": 3,
+                "title": "Doc",
+                "chunk_index": 3,
+                "content": "vector passage",
+                "score": 0.81,
+            },
+        ]
+        keyword_rows = [
+            {
+                "id": 10,
+                "document_id": 3,
+                "title": "Doc",
+                "chunk_index": 2,
+                "content": "shared passage",
+                "score": 0.6,
+            },
+            {
+                "id": 11,
+                "document_id": 3,
+                "title": "Doc",
+                "chunk_index": 4,
+                "content": "keyword passage",
+                "score": 0.5,
+            },
         ]
 
         with mock.patch.object(
@@ -189,29 +216,32 @@ class RetrieverTests(unittest.TestCase):
         ) as embed, mock.patch.object(
             retriever.embeddings, "vector_to_sql", return_value="[0.1,0.2]"
         ), mock.patch.object(
-            retriever.vector_store, "search_chunks", return_value=rows
-        ) as search:
-            result = retriever.retrieve(5, "question", top_k=3, document_ids=[3])
+            retriever.vector_store, "search_chunks", return_value=vector_rows
+        ) as vector_search, mock.patch.object(
+            retriever.vector_store,
+            "search_keyword_chunks",
+            return_value=keyword_rows,
+        ) as keyword_search:
+            result = retriever.retrieve(5, "question", top_k=2, document_ids=[3])
 
         embed.assert_called_once_with("question")
-        search.assert_called_once_with(
+        vector_search.assert_called_once_with(
             user_id=5,
             query_vector="[0.1,0.2]",
-            top_k=3,
+            top_k=4,
             document_ids=[3],
         )
-        self.assertEqual(
-            result,
-            [
-                {
-                    "documentId": 3,
-                    "title": "Doc",
-                    "chunkIndex": 2,
-                    "content": "passage",
-                    "score": 0.87,
-                }
-            ],
+        keyword_search.assert_called_once_with(
+            user_id=5,
+            query="question",
+            top_k=4,
+            document_ids=[3],
         )
+        self.assertEqual(len(result), 2)
+        self.assertEqual(result[0]["content"], "shared passage")
+        self.assertIn("keyword passage", [row["content"] for row in result])
+        self.assertEqual(len({row["content"] for row in result}), len(result))
+        self.assertTrue(all(0 <= row["score"] <= 1 for row in result))
 
 
 class PipelineAnswerTests(unittest.TestCase):

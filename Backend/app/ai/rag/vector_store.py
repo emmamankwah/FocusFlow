@@ -190,3 +190,34 @@ def search_chunks(
             return [dict(row) for row in cursor.fetchall()]
     finally:
         connection.close()
+
+
+def search_keyword_chunks(
+    user_id: int,
+    query: str,
+    top_k: int,
+    document_ids: list[int] | None = None,
+) -> list[dict]:
+    """Find chunks by PostgreSQL full-text relevance."""
+    connection = _connect()
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "WITH search_query AS ("
+                "SELECT websearch_to_tsquery('english', %s) AS query) "
+                "SELECT c.id, c.document_id, c.chunk_index, c.content, d.title, "
+                "ts_rank_cd(c.search_vector, search_query.query) AS score "
+                "FROM document_chunks c "
+                "JOIN documents d ON d.id = c.document_id "
+                "CROSS JOIN search_query "
+                "WHERE c.user_id = %s "
+                "AND d.status = 'ready' "
+                "AND c.search_vector @@ search_query.query "
+                "AND (%s::bigint[] IS NULL OR c.document_id = ANY(%s::bigint[])) "
+                "ORDER BY score DESC, c.id "
+                "LIMIT %s",
+                (query, user_id, document_ids, document_ids, top_k),
+            )
+            return [dict(row) for row in cursor.fetchall()]
+    finally:
+        connection.close()

@@ -38,6 +38,11 @@ The FastEmbed model is downloaded on first use and cached under `.cache/fastembe
 by default. The first document ingestion can therefore take longer and needs
 network access; later runs reuse the cached model.
 
+RAG retrieval combines pgvector semantic search with PostgreSQL English
+full-text search. Apply `schema/004_hybrid_search.sql` to existing databases;
+the generated full-text index covers existing chunks, so documents do not need
+to be re-ingested.
+
 ## Run
 
 ### Local production-style run
